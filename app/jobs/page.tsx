@@ -4,7 +4,7 @@ import React, { useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useDispatch, useSelector } from 'react-redux';
 import { Plus, Briefcase } from 'lucide-react';
-import api from '@/lib/api';
+import api, { getApiErrorMessage } from '@/lib/api';
 import JobCard from '@/components/jobs/JobCard';
 import type { RootState, AppDispatch } from '@/store';
 import { setJobs, setLoading, setError } from '@/store/slices/jobsSlice';
@@ -69,8 +69,7 @@ const JobsPage: React.FC = () => {
         }
       } catch (e: unknown) {
         if (!cancelled) {
-          const message = e instanceof Error ? e.message : 'Failed to load jobs';
-          dispatch(setError(message));
+          dispatch(setError(getApiErrorMessage(e)));
         }
       } finally {
         if (!cancelled) dispatch(setLoading(false));

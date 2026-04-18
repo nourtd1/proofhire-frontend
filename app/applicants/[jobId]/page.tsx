@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
 import { MapPin, Upload, Users } from 'lucide-react';
-import api from '@/lib/api';
+import api, { getApiErrorMessage } from '@/lib/api';
 import type { RootState, AppDispatch } from '@/store';
 import { setApplicants, setLoading, setError } from '@/store/slices/applicantsSlice';
 import { addJob } from '@/store/slices/jobsSlice';
@@ -159,8 +159,7 @@ export default function ApplicantsPage(): React.JSX.Element {
       // Store server state in Redux (as-is), UI derives from it.
       dispatch(setApplicants(applicantsRes.data.data as unknown as ApplicantsArray));
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Failed to load applicants';
-      dispatch(setError(message));
+      dispatch(setError(getApiErrorMessage(e)));
     } finally {
       dispatch(setLoading(false));
     }
@@ -205,7 +204,7 @@ export default function ApplicantsPage(): React.JSX.Element {
       setFile(null);
       await refresh();
     } catch (e: unknown) {
-      setUploadError(e instanceof Error ? e.message : 'Failed to import applicants');
+      setUploadError(getApiErrorMessage(e));
     } finally {
       setUploadLoading(false);
     }

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
 import { ArrowLeft, RefreshCw, Zap } from 'lucide-react';
-import api from '@/lib/api';
+import api, { getApiErrorMessage } from '@/lib/api';
 import type { RootState, AppDispatch } from '@/store';
 import { addJob } from '@/store/slices/jobsSlice';
 import { setApplicants } from '@/store/slices/applicantsSlice';
@@ -64,6 +64,9 @@ const formatDate = (value: string | undefined): string => {
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).format(d);
 };
 
+const isValidMongoObjectId = (id: string | undefined): id is string =>
+  typeof id === 'string' && /^[a-f0-9]{24}$/i.test(id);
+
 export default function ScreeningJobPage(): React.JSX.Element {
   const params = useParams<{ jobId: string }>();
   const jobId = params.jobId;
@@ -78,6 +81,11 @@ export default function ScreeningJobPage(): React.JSX.Element {
   const fetchAll = useCallback(async (): Promise<void> => {
     dispatch(setError(null));
     dispatch(setLoading(true));
+    if (!isValidMongoObjectId(jobId)) {
+      dispatch(setError('Invalid job ID in the URL.'));
+      dispatch(setLoading(false));
+      return;
+    }
     try {
       const [jobRes, applicantsRes, resultsRes] = await Promise.all([
         api.get<ApiSuccess<BackendJob> | ApiError>(`/api/jobs/${jobId}`),
@@ -96,7 +104,7 @@ export default function ScreeningJobPage(): React.JSX.Element {
       dispatch(setResults(results));
       dispatch(setTriggered(results.length > 0));
     } catch (e: unknown) {
-      dispatch(setError(e instanceof Error ? e.message : 'Failed to load screening data'));
+      dispatch(setError(getApiErrorMessage(e)));
     } finally {
       dispatch(setLoading(false));
     }
@@ -110,13 +118,18 @@ export default function ScreeningJobPage(): React.JSX.Element {
   const runScreening = useCallback(async (): Promise<void> => {
     dispatch(setError(null));
     dispatch(setLoading(true));
+    if (!isValidMongoObjectId(jobId)) {
+      dispatch(setError('Invalid job ID.'));
+      dispatch(setLoading(false));
+      return;
+    }
     try {
       const res = await api.post<ApiSuccess<ScreeningResultWithApplicant[]> | ApiError>('/api/screening/run', { jobId });
       if (!res.data.success) throw new Error(res.data.message);
       dispatch(setResults(res.data.data));
       dispatch(setTriggered(true));
     } catch (e: unknown) {
-      dispatch(setError(e instanceof Error ? e.message : 'Screening failed'));
+      dispatch(setError(getApiErrorMessage(e)));
     } finally {
       dispatch(setLoading(false));
     }

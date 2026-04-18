@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
 import { Briefcase, CheckCircle, List, TrendingUp, Zap } from 'lucide-react';
-import api from '@/lib/api';
+import api, { getApiErrorMessage } from '@/lib/api';
 import type { RootState, AppDispatch } from '@/store';
 import { setJobs, setLoading, setError } from '@/store/slices/jobsSlice';
 import EmptyState from '@/components/ui/EmptyState';
@@ -80,7 +80,7 @@ export default function DashboardPage(): React.JSX.Element {
         const normalized = res.data.data.map(normalizeJob);
         if (!cancelled) dispatch(setJobs(normalized));
       } catch (e: unknown) {
-        if (!cancelled) dispatch(setError(e instanceof Error ? e.message : 'Failed to load jobs'));
+        if (!cancelled) dispatch(setError(getApiErrorMessage(e)));
       } finally {
         if (!cancelled) dispatch(setLoading(false));
       }

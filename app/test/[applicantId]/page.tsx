@@ -12,7 +12,7 @@ import {
   Target,
   Timer,
 } from 'lucide-react'
-import api from '@/lib/api'
+import api, { getApiErrorMessage } from '@/lib/api'
 import type { RootState, AppDispatch } from '@/store'
 import {
   nextQuestion,
@@ -167,7 +167,7 @@ export default function TestPage(): React.JSX.Element {
       dispatch(setTest({ testId: gen.data.data.testId, questions: gen.data.data.questions }))
       dispatch(setStatus('idle'))
     } catch (e: unknown) {
-      dispatch(setError(e instanceof Error ? e.message : 'Failed to load test'))
+      dispatch(setError(getApiErrorMessage(e)))
       dispatch(setStatus('idle'))
     }
   }, [applicantId, dispatch, jobId])
@@ -190,7 +190,7 @@ export default function TestPage(): React.JSX.Element {
         dispatch(setResult(res.data.data))
         dispatch(setStatus('completed'))
       } catch (e: unknown) {
-        dispatch(setError(e instanceof Error ? e.message : 'Submit failed'))
+        dispatch(setError(getApiErrorMessage(e)))
         dispatch(setStatus('in_progress'))
       }
     },
@@ -213,7 +213,7 @@ export default function TestPage(): React.JSX.Element {
       dispatch(setAnswers(data.answers))
       dispatch(setStatus('in_progress'))
     } catch (e: unknown) {
-      dispatch(setError(e instanceof Error ? e.message : 'Failed to start test'))
+      dispatch(setError(getApiErrorMessage(e)))
     }
   }, [applicantId, dispatch, test.testId])
 

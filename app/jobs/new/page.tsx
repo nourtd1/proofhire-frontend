@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useDispatch } from 'react-redux';
 import Link from 'next/link';
 import { ArrowLeft, Plus, X, Loader2 } from 'lucide-react';
-import api from '@/lib/api';
+import api, { getApiErrorMessage } from '@/lib/api';
 import { addJob, setError } from '@/store/slices/jobsSlice';
 import type { AppDispatch } from '@/store';
 import type { Job } from '@/types';
@@ -125,7 +125,7 @@ const CreateJobPage: React.FC = () => {
       dispatch(addJob(job));
       router.push('/jobs');
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to create job';
+      const message = getApiErrorMessage(err);
       setSubmitError(message);
       dispatch(setError(message));
     } finally {
