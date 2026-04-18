@@ -1,67 +1,260 @@
-import React from 'react';
-import { Zap, Play, BarChart3, Clock } from 'lucide-react';
+'use client';
 
-export default function ScreeningPage({ params }: { params: { jobId: string } }) {
-  return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">AI Screening</h1>
-          <p className="text-slate-500 mt-1">Run AI-powered analysis for job: <span className="text-indigo-600 font-semibold">#{params.jobId}</span></p>
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { useDispatch, useSelector } from 'react-redux';
+import { ArrowLeft, RefreshCw, Zap } from 'lucide-react';
+import api from '@/lib/api';
+import type { RootState, AppDispatch } from '@/store';
+import { addJob } from '@/store/slices/jobsSlice';
+import { setApplicants } from '@/store/slices/applicantsSlice';
+import { setError, setLoading, setResults, setTriggered } from '@/store/slices/screeningSlice';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import ErrorMessage from '@/components/ui/ErrorMessage';
+import EmptyState from '@/components/ui/EmptyState';
+import ResultCard from '@/components/screening/ResultCard';
+import type { Job, ScreeningResultWithApplicant } from '@/types';
+
+type ApiSuccess<T> = { success: true; data: T; count?: number; message?: string };
+type ApiError = { success: false; message: string };
+
+type BackendJob = {
+  _id?: string;
+  id?: string;
+  title?: string;
+  description?: string;
+  requirements?: string[];
+  status?: 'Open' | 'Closed' | 'Draft';
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
+  skills?: string[];
+  experienceLevel?: string;
+};
+
+type JobWithExtras = Job & { skills?: string[]; experienceLevel?: string };
+
+const toIsoString = (d: string | Date | undefined): string => {
+  if (!d) return new Date().toISOString();
+  if (typeof d === 'string') return d;
+  return d.toISOString();
+};
+
+const normalizeJob = (raw: BackendJob): JobWithExtras => {
+  const id = typeof raw.id === 'string' ? raw.id : typeof raw._id === 'string' ? raw._id : '';
+  return {
+    id,
+    title: typeof raw.title === 'string' ? raw.title : '',
+    description: typeof raw.description === 'string' ? raw.description : '',
+    requirements: Array.isArray(raw.requirements)
+      ? raw.requirements.filter((x): x is string => typeof x === 'string')
+      : [],
+    status: raw.status ?? 'Open',
+    createdAt: toIsoString(raw.createdAt),
+    updatedAt: toIsoString(raw.updatedAt),
+    skills: Array.isArray(raw.skills) ? raw.skills.filter((x): x is string => typeof x === 'string') : [],
+    experienceLevel: typeof raw.experienceLevel === 'string' ? raw.experienceLevel : '',
+  };
+};
+
+const formatDate = (value: string | undefined): string => {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '—';
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).format(d);
+};
+
+export default function ScreeningJobPage(): React.JSX.Element {
+  const params = useParams<{ jobId: string }>();
+  const jobId = params.jobId;
+
+  const dispatch = useDispatch<AppDispatch>();
+  const job = useSelector((s: RootState) => s.jobs.jobs.find((j) => j.id === jobId)) as JobWithExtras | undefined;
+  const applicants = useSelector((s: RootState) => s.applicants.applicants);
+  const screening = useSelector((s: RootState) => s.screening);
+
+  const [shortlist, setShortlist] = useState<10 | 20>(10);
+
+  const fetchAll = useCallback(async (): Promise<void> => {
+    dispatch(setError(null));
+    dispatch(setLoading(true));
+    try {
+      const [jobRes, applicantsRes, resultsRes] = await Promise.all([
+        api.get<ApiSuccess<BackendJob> | ApiError>(`/api/jobs/${jobId}`),
+        api.get<ApiSuccess<unknown[]> | ApiError>(`/api/applicants/${jobId}`),
+        api.get<ApiSuccess<ScreeningResultWithApplicant[]> | ApiError>(`/api/screening/${jobId}`),
+      ]);
+
+      if (!jobRes.data.success) throw new Error(jobRes.data.message);
+      if (!applicantsRes.data.success) throw new Error(applicantsRes.data.message);
+      if (!resultsRes.data.success) throw new Error(resultsRes.data.message);
+
+      dispatch(addJob(normalizeJob(jobRes.data.data)));
+      dispatch(setApplicants(applicantsRes.data.data as unknown as RootState['applicants']['applicants']));
+
+      const results = resultsRes.data.data ?? [];
+      dispatch(setResults(results));
+      dispatch(setTriggered(results.length > 0));
+    } catch (e: unknown) {
+      dispatch(setError(e instanceof Error ? e.message : 'Failed to load screening data'));
+    } finally {
+      dispatch(setLoading(false));
+    }
+  }, [dispatch, jobId]);
+
+  useEffect(() => {
+    const t = setTimeout(() => void fetchAll(), 0);
+    return () => clearTimeout(t);
+  }, [fetchAll]);
+
+  const runScreening = useCallback(async (): Promise<void> => {
+    dispatch(setError(null));
+    dispatch(setLoading(true));
+    try {
+      const res = await api.post<ApiSuccess<ScreeningResultWithApplicant[]> | ApiError>('/api/screening/run', { jobId });
+      if (!res.data.success) throw new Error(res.data.message);
+      dispatch(setResults(res.data.data));
+      dispatch(setTriggered(true));
+    } catch (e: unknown) {
+      dispatch(setError(e instanceof Error ? e.message : 'Screening failed'));
+    } finally {
+      dispatch(setLoading(false));
+    }
+  }, [dispatch, jobId]);
+
+  const results = screening.results;
+  const hasResults = results.length > 0;
+
+  const topHireCount = useMemo(() => results.filter((r) => r.recommendation === 'Hire').length, [results]);
+  const avgScore = useMemo(() => {
+    if (results.length === 0) return 0;
+    return Math.round(results.reduce((acc, r) => acc + r.matchScore, 0) / results.length);
+  }, [results]);
+  const screenedOn = useMemo(() => formatDate(results[0]?.createdAt), [results]);
+
+  const visibleResults = useMemo(() => results.slice(0, shortlist), [results, shortlist]);
+
+  if (!hasResults && !screening.triggered) {
+    return (
+      <div className="max-w-2xl mx-auto mt-16">
+        {screening.error ? <ErrorMessage message={screening.error} onRetry={() => void fetchAll()} /> : null}
+
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 text-center">
+          <Zap className="w-16 h-16 text-indigo-300 mx-auto" />
+          <h1 className="text-2xl font-bold text-gray-800 mt-6">{job?.title ?? 'AI Screening'}</h1>
+          <p className="text-gray-500 mt-2">
+            ProofHire will analyze all candidates using Gemini AI and rank them by fit
+          </p>
+          <p className="text-gray-600 font-semibold mt-6">{applicants.length} candidates ready to be screened</p>
+
+          {!screening.loading ? (
+            <button
+              type="button"
+              onClick={() => void runScreening()}
+              className="mt-8 inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 text-lg rounded-xl font-semibold transition-colors shadow-sm shadow-indigo-200"
+            >
+              <Zap className="w-5 h-5" />
+              Run AI Screening
+            </button>
+          ) : (
+            <div className="mt-8 bg-gray-50 border border-gray-100 rounded-xl p-8">
+              <LoadingSpinner size="lg" />
+              <div className="mt-5 text-lg text-gray-600 font-semibold">Gemini AI is analyzing candidates...</div>
+              <div className="mt-3 flex items-center justify-center gap-2">
+                <span className="pulse-dot w-2 h-2 bg-indigo-400 rounded-full" />
+                <span className="pulse-dot w-2 h-2 bg-indigo-400 rounded-full" />
+                <span className="pulse-dot w-2 h-2 bg-indigo-400 rounded-full" />
+              </div>
+              <div className="mt-3 text-sm text-gray-500">This may take 15-30 seconds</div>
+            </div>
+          )}
+
+          <p className="text-xs text-gray-400 mt-8">Powered by Gemini AI · African talent context-aware</p>
         </div>
-        <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm shadow-indigo-200">
-          <Play size={18} />
-          Run All Screenings
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="sticky top-16 bg-white shadow-sm border border-gray-100 rounded-xl px-4 py-3 flex items-center justify-between">
+        <Link href="/jobs" className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900">
+          <ArrowLeft className="w-4 h-4" />
+          <span className="text-sm font-medium">Back to Jobs</span>
+        </Link>
+        <div className="text-center">
+          <div className="font-semibold text-gray-800">{job?.title ?? 'Job'}</div>
+          <div className="text-xs text-gray-400">AI Screening Results</div>
+        </div>
+        <button
+          type="button"
+          onClick={() => void runScreening()}
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-indigo-200 text-indigo-700 hover:bg-indigo-50 transition-colors text-sm font-medium"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Re-run Screening
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 h-96 flex flex-col items-center justify-center text-center">
-                <div className="bg-indigo-50 p-6 rounded-full mb-4">
-                    <Zap size={48} className="text-indigo-300" />
-                </div>
-                <h3 className="text-xl font-bold text-slate-900">No screenings run yet</h3>
-                <p className="text-slate-500 max-w-sm mt-2">Trigger the AI analysis to evaluate all candidates against the job requirements.</p>
-                <button className="mt-6 text-indigo-600 font-semibold hover:underline">
-                    Learn how it works →
-                </button>
-            </div>
-        </div>
+      {screening.error ? <ErrorMessage message={screening.error} onRetry={() => void fetchAll()} /> : null}
 
-        <div className="space-y-6">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                <h4 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
-                    <BarChart3 size={18} className="text-indigo-500" />
-                    Screening Status
-                </h4>
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-500">Completed</span>
-                        <span className="font-semibold text-slate-900">0</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-500">In Progress</span>
-                        <span className="font-semibold text-slate-900">0</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-500">Pending</span>
-                        <span className="font-semibold text-slate-900">0</span>
-                    </div>
-                </div>
-            </div>
-
-            <div className="bg-indigo-900 rounded-2xl p-6 text-white shadow-lg shadow-indigo-200">
-                <div className="flex items-center gap-2 mb-2">
-                    <Clock size={16} />
-                    <span className="text-xs font-semibold uppercase tracking-wider text-indigo-200">Pro Tip</span>
-                </div>
-                <h4 className="font-bold mb-2">Detailed Analysis</h4>
-                <p className="text-indigo-100/80 text-sm leading-relaxed">
-                    ProofHire's AI analyzes skills, experience, and achievements to give you a comprehensive match score.
-                </p>
-            </div>
+      <div className="bg-indigo-600 text-white rounded-xl p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div>
+          <div className="text-2xl font-bold">{results.length}</div>
+          <div className="text-xs opacity-80">Analyzed</div>
         </div>
+        <div>
+          <div className="text-2xl font-bold">{topHireCount}</div>
+          <div className="text-xs opacity-80">Top Candidates</div>
+        </div>
+        <div>
+          <div className="text-2xl font-bold">{avgScore}</div>
+          <div className="text-xs opacity-80">Avg Score</div>
+        </div>
+        <div>
+          <div className="text-2xl font-bold">{screenedOn}</div>
+          <div className="text-xs opacity-80">Screened On</div>
+        </div>
+      </div>
+
+      {!screening.loading && results.length === 0 ? (
+        <EmptyState
+          icon={Zap}
+          title="No screening results"
+          subtitle="Click 'Run AI Screening' to analyze your candidates"
+          action={{ label: 'Run AI Screening', onClick: () => void runScreening() }}
+        />
+      ) : null}
+
+      <div className="flex items-center justify-center">
+        <div className="bg-indigo-600 rounded-full p-1 inline-flex gap-1 text-white">
+          <button
+            type="button"
+            onClick={() => setShortlist(10)}
+            className={[
+              'px-4 py-2 rounded-full text-sm font-semibold transition-colors',
+              shortlist === 10 ? 'bg-white text-indigo-700' : 'bg-transparent text-white/90 hover:bg-white/10',
+            ].join(' ')}
+          >
+            Top 10
+          </button>
+          <button
+            type="button"
+            onClick={() => setShortlist(20)}
+            className={[
+              'px-4 py-2 rounded-full text-sm font-semibold transition-colors',
+              shortlist === 20 ? 'bg-white text-indigo-700' : 'bg-transparent text-white/90 hover:bg-white/10',
+            ].join(' ')}
+          >
+            Top 20
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {visibleResults.map((r, idx) => (
+          <ResultCard key={r._id} result={r} animationDelay={idx * 100} />
+        ))}
       </div>
     </div>
   );

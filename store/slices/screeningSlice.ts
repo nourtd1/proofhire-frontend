@@ -1,8 +1,8 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { ScreeningResult } from '../../types';
+import type { ScreeningResultWithApplicant } from '../../types';
 
 interface ScreeningState {
-  results: ScreeningResult[];
+  results: ScreeningResultWithApplicant[];
   loading: boolean;
   error: string | null;
   triggered: boolean;
@@ -19,7 +19,7 @@ const screeningSlice = createSlice({
   name: 'screening',
   initialState,
   reducers: {
-    setResults: (state, action: PayloadAction<ScreeningResult[]>) => {
+    setResults: (state, action: PayloadAction<ScreeningResultWithApplicant[]>) => {
       state.results = action.payload;
     },
     setLoading: (state, action: PayloadAction<boolean>) => {

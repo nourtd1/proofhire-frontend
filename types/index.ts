@@ -65,3 +65,21 @@ export interface ScreeningResult {
   weaknesses: string[];
   createdAt: string;
 }
+
+// P6 dashboard / AI screening results shape (backend returns this for GET /api/screening/:jobId)
+export interface ScreeningResultWithApplicant {
+  _id: string;
+  jobId: string;
+  applicantId: {
+    _id: string;
+    profile: TalentProfile;
+    source: 'platform' | 'upload';
+  };
+  matchScore: number;
+  strengths: string[];
+  gaps: string[];
+  recommendation: 'Hire' | 'Maybe' | 'Pass';
+  reasoning: string;
+  rank: number;
+  createdAt?: string;
+}

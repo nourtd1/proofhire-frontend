@@ -1,54 +1,149 @@
-import React from 'react';
-import Link from 'next/link';
-import { Plus, Briefcase, Search } from 'lucide-react';
-import JobCard from '@/components/jobs/JobCard';
+'use client';
 
-const JobsPage = () => {
+import React, { useEffect, useMemo } from 'react';
+import Link from 'next/link';
+import { useDispatch, useSelector } from 'react-redux';
+import { Plus, Briefcase } from 'lucide-react';
+import api from '@/lib/api';
+import JobCard from '@/components/jobs/JobCard';
+import type { RootState, AppDispatch } from '@/store';
+import { setJobs, setLoading, setError } from '@/store/slices/jobsSlice';
+import type { Job } from '@/types';
+
+type ApiSuccess<T> = { success: true; data: T };
+type ApiError = { success: false; message: string };
+
+type BackendJob = {
+  _id?: string;
+  id?: string;
+  title?: string;
+  description?: string;
+  requirements?: string[];
+  skills?: string[];
+  experienceLevel?: string;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
+  status?: 'Open' | 'Closed' | 'Draft';
+};
+
+const toIsoString = (d: string | Date | undefined): string => {
+  if (!d) return new Date().toISOString();
+  if (typeof d === 'string') return d;
+  return d.toISOString();
+};
+
+const normalizeJob = (raw: BackendJob): Job & { skills?: string[]; experienceLevel?: string } => {
+  const id = typeof raw.id === 'string' ? raw.id : typeof raw._id === 'string' ? raw._id : '';
+  return {
+    id,
+    title: typeof raw.title === 'string' ? raw.title : '',
+    description: typeof raw.description === 'string' ? raw.description : '',
+    requirements: Array.isArray(raw.requirements) ? raw.requirements.filter((x): x is string => typeof x === 'string') : [],
+    status: raw.status ?? 'Open',
+    createdAt: toIsoString(raw.createdAt),
+    updatedAt: toIsoString(raw.updatedAt),
+    skills: Array.isArray(raw.skills) ? raw.skills.filter((x): x is string => typeof x === 'string') : [],
+    experienceLevel: typeof raw.experienceLevel === 'string' ? raw.experienceLevel : '',
+  };
+};
+
+const JobsPage: React.FC = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { jobs, loading, error } = useSelector((s: RootState) => s.jobs);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const run = async (): Promise<void> => {
+      dispatch(setLoading(true));
+      dispatch(setError(null));
+
+      try {
+        const res = await api.get<ApiSuccess<BackendJob[]> | ApiError>('/api/jobs');
+        if (!res.data.success) {
+          throw new Error(res.data.message);
+        }
+        const normalized = res.data.data.map(normalizeJob);
+        if (!cancelled) {
+          dispatch(setJobs(normalized));
+        }
+      } catch (e: unknown) {
+        if (!cancelled) {
+          const message = e instanceof Error ? e.message : 'Failed to load jobs';
+          dispatch(setError(message));
+        }
+      } finally {
+        if (!cancelled) dispatch(setLoading(false));
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [dispatch]);
+
+  const showEmpty = useMemo(() => !loading && !error && jobs.length === 0, [loading, error, jobs.length]);
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Jobs</h1>
-          <p className="text-slate-500 mt-1">Manage all your active and draft job descriptions.</p>
+          <p className="text-slate-500 mt-1">Manage your open positions</p>
         </div>
-        <Link href="/jobs/new" className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm shadow-indigo-200">
+        <Link
+          href="/jobs/new"
+          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm shadow-indigo-200"
+        >
           <Plus size={20} />
           Create Job
         </Link>
       </div>
 
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
-        <div className="relative flex-1">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-            <Search size={18} />
-          </div>
-          <input
-            type="text"
-            className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50/50"
-            placeholder="Filter jobs..."
-          />
+      {error ? (
+        <div className="rounded-xl border border-red-200 bg-red-50 text-red-700 px-4 py-3">
+          {error}
         </div>
-        <select className="bg-slate-50/50 border border-slate-200 rounded-lg px-4 py-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
-          <option>All Status</option>
-          <option>Open</option>
-          <option>Closed</option>
-          <option>Draft</option>
-        </select>
-      </div>
+      ) : null}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Empty state placeholder */}
-        <div className="col-span-full py-20 flex flex-col items-center justify-center text-center bg-white rounded-2xl border-2 border-dashed border-slate-200">
+      {loading ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <div
+              key={idx}
+              className="h-44 bg-slate-100 rounded-2xl animate-pulse"
+            />
+          ))}
+        </div>
+      ) : null}
+
+      {showEmpty ? (
+        <div className="py-20 flex flex-col items-center justify-center text-center bg-white rounded-2xl border-2 border-dashed border-slate-200">
           <div className="bg-slate-50 p-6 rounded-full mb-4">
             <Briefcase size={48} className="text-slate-300" />
           </div>
           <h3 className="text-xl font-bold text-slate-900">No jobs yet</h3>
-          <p className="text-slate-500 max-w-sm mt-2">Get started by creating your first job description to start screening talent.</p>
-          <Link href="/jobs/new" className="mt-6 text-indigo-600 font-semibold hover:underline">
-            Create your first job →
+          <p className="text-slate-500 max-w-sm mt-2">
+            Create your first job to start screening candidates
+          </p>
+          <Link
+            href="/jobs/new"
+            className="mt-6 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium inline-flex items-center gap-2 transition-colors shadow-sm shadow-indigo-200"
+          >
+            <Plus size={18} />
+            Create Job
           </Link>
         </div>
-      </div>
+      ) : null}
+
+      {!loading && !showEmpty ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {jobs.map((job) => (
+            <JobCard key={job.id} job={job} />
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 };

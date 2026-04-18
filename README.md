@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ProofHire
 
-## Getting Started
+> "Don't just claim it. Prove it."
 
-First, run the development server:
+An AI-powered talent screening tool for recruiters built for the Umurava AI Hackathon.
 
+## What it does
+- Recruiters create job openings with required skills and experience level
+- Candidates are ingested via structured JSON profiles or CSV uploads
+- Gemini AI analyzes ALL candidates simultaneously and ranks them by fit
+- Each candidate gets a match score (0-100), strengths, gaps, and a hiring recommendation
+- Top candidates receive a "Verified" badge after passing a skill challenge
+
+## Tech Stack
+- **Frontend**: Next.js 14, TypeScript, Tailwind CSS, Redux Toolkit
+- **Backend**: Node.js, Express, TypeScript, MongoDB (Mongoose)
+- **AI Engine**: Google Gemini 1.5 Flash
+- **Deployment**: Vercel (frontend) + Railway (backend)
+
+## Local Setup
+
+### Prerequisites
+- Node.js 18+
+- MongoDB Atlas account
+- Google AI Studio API key (Gemini)
+
+### Frontend
 ```bash
+cd proofhire-frontend
+npm install
+cp .env.local.example .env.local
+# Add your NEXT_PUBLIC_API_URL
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Backend
+```bash
+cd proofhire-backend
+npm install
+cp .env.example .env
+# Add your MONGODB_URI and GEMINI_API_KEY
+npm run seed   # populate test data
+npm run dev
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Frontend (.env.local)
+| Variable | Description |
+|----------|-------------|
+| NEXT_PUBLIC_API_URL | Backend URL (http://localhost:5000 in dev) |
 
-## Learn More
+### Backend (.env)
+| Variable | Description |
+|----------|-------------|
+| PORT | Server port (default: 5000) |
+| MONGODB_URI | MongoDB Atlas connection string |
+| GEMINI_API_KEY | Google AI Studio API key |
 
-To learn more about Next.js, take a look at the following resources:
+## AI Decision Flow
+1. Recruiter triggers screening for a job
+2. Backend fetches all applicants for that job from MongoDB
+3. All profiles are compiled into a single structured prompt
+4. Gemini 1.5 Flash evaluates each candidate against job requirements
+5. Gemini returns a ranked JSON array with scores, strengths, gaps, and recommendations
+6. Results are saved to MongoDB and returned to the frontend
+7. Frontend displays the ranked shortlist with expandable AI reasoning
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Assumptions & Limitations
+- Gemini API rate limits may affect screening of large batches (50+ candidates)
+- CSV import supports basic profile fields only (not full nested experience/education)
+- AI scores are indicative — final hiring decisions remain with the recruiter
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Team
+Built at the Umurava AI Hackathon by [NovaTalent]
