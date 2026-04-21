@@ -47,7 +47,7 @@ const normalizeJob = (raw: BackendJob): Job & { skills?: string[]; experienceLev
   };
 };
 
-type ExperienceLevel = 'Junior' | 'Mid-Level' | 'Senior' | 'Lead';
+type ExperienceLevel = 'Junior' | 'Mid' | 'Senior';
 
 interface FieldErrors {
   title?: string;
@@ -61,7 +61,7 @@ const CreateJobPage: React.FC = () => {
 
   const [title, setTitle] = useState<string>('');
   const [description, setDescription] = useState<string>('');
-  const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>('Mid-Level');
+  const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>('Mid');
   const [skillInput, setSkillInput] = useState<string>('');
   const [skills, setSkills] = useState<string[]>([]);
   const [requirementsText, setRequirementsText] = useState<string>('');
@@ -191,9 +191,8 @@ const CreateJobPage: React.FC = () => {
               className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
             >
               <option value="Junior">Junior</option>
-              <option value="Mid-Level">Mid-Level</option>
+              <option value="Mid">Mid</option>
               <option value="Senior">Senior</option>
-              <option value="Lead">Lead</option>
             </select>
           </div>
 

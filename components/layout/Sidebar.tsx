@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Briefcase, Zap } from 'lucide-react';
+import { LayoutDashboard, Briefcase, Users, Zap } from 'lucide-react';
 
 const Sidebar = () => {
   const pathname = usePathname();
@@ -11,6 +11,7 @@ const Sidebar = () => {
   const navLinks = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/jobs', label: 'Jobs', icon: Briefcase },
+    { href: '/applicants', label: 'Applications', icon: Users },
     { href: '/screening', label: 'Screening', icon: Zap },
   ];
 
@@ -28,6 +29,10 @@ const Sidebar = () => {
             </h1>
           </div>
           <p className="text-xs text-gray-500 mt-2">AI Talent Screening</p>
+        </div>
+
+        <div className="mb-3 px-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+          Recruiter Workspace
         </div>
 
         <nav className="space-y-1">

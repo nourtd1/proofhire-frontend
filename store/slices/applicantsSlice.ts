@@ -7,6 +7,17 @@ interface ApplicantsState {
   error: string | null;
 }
 
+const dedupeApplicants = (applicants: Applicant[]): Applicant[] => {
+  const byId = new Map<string, Applicant>();
+
+  for (const applicant of applicants) {
+    if (!applicant.id) continue;
+    byId.set(applicant.id, applicant);
+  }
+
+  return [...byId.values()];
+};
+
 const initialState: ApplicantsState = {
   applicants: [],
   loading: false,
@@ -18,10 +29,19 @@ const applicantsSlice = createSlice({
   initialState,
   reducers: {
     setApplicants: (state, action: PayloadAction<Applicant[]>) => {
-      state.applicants = action.payload;
+      state.applicants = dedupeApplicants(action.payload);
     },
     addApplicant: (state, action: PayloadAction<Applicant>) => {
-      state.applicants.push(action.payload);
+      const incoming = action.payload;
+      if (!incoming.id) return;
+
+      const existingIndex = state.applicants.findIndex((applicant) => applicant.id === incoming.id);
+      if (existingIndex >= 0) {
+        state.applicants[existingIndex] = incoming;
+        return;
+      }
+
+      state.applicants.push(incoming);
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.loading = action.payload;

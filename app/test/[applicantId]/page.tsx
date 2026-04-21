@@ -38,6 +38,14 @@ type TestQuestion = RootState['test']['questions'][number]
 
 type GenerateResponse = { testId: string; questions: TestQuestion[] }
 
+type ApplicantDetail = {
+  _id?: string
+  profile?: {
+    firstName?: string
+    lastName?: string
+  }
+}
+
 type GetTestInProgress = {
   _id: string
   applicantId: string
@@ -105,13 +113,15 @@ export default function TestPage(): React.JSX.Element {
   const params = useParams<{ applicantId: string }>()
   const searchParams = useSearchParams()
   const applicantId = params.applicantId
-  const jobId = searchParams.get('jobId') ?? ''
+  const jobIdFromQuery = searchParams.get('jobId') ?? ''
 
   const dispatch = useDispatch<AppDispatch>()
   const test = useSelector((s: RootState) => s.test)
 
   const [showConfirm, setShowConfirm] = useState<boolean>(false)
   const [showBreakdown, setShowBreakdown] = useState<boolean>(false)
+  const [candidateName, setCandidateName] = useState<string>('Candidate')
+  const [resolvedJobId, setResolvedJobId] = useState<string>(jobIdFromQuery)
 
   const uniqueSkills = useMemo(() => {
     const set = new Set<string>()
@@ -131,6 +141,7 @@ export default function TestPage(): React.JSX.Element {
 
       const data = existing.data.data
       if (data && data.status === 'completed') {
+        setResolvedJobId(data.jobId)
         dispatch(setTest({ testId: data._id, questions: data.questions }))
         dispatch(setAnswers(data.answers))
         dispatch(setResult(data.result))
@@ -139,6 +150,7 @@ export default function TestPage(): React.JSX.Element {
       }
 
       if (data && data.status === 'in_progress') {
+        setResolvedJobId(data.jobId)
         dispatch(setTest({ testId: data._id, questions: data.questions }))
         dispatch(setAnswers(data.answers))
         dispatch(setTimeLeft(data.timeLeft))
@@ -147,6 +159,7 @@ export default function TestPage(): React.JSX.Element {
       }
 
       if (data && data.status === 'pending') {
+        setResolvedJobId(data.jobId)
         dispatch(setTest({ testId: data._id, questions: data.questions }))
         dispatch(setAnswers(data.answers))
         dispatch(setTimeLeft(300))
@@ -154,27 +167,49 @@ export default function TestPage(): React.JSX.Element {
         return
       }
 
-      if (!jobId) {
+      if (!jobIdFromQuery) {
         throw new Error('Missing jobId in URL. Please open this test from an Applicant card.')
       }
 
       const gen = await api.post<ApiSuccess<GenerateResponse> | ApiError>('/api/tests/generate', {
         applicantId,
-        jobId,
+        jobId: jobIdFromQuery,
       })
       if (!gen.data.success) throw new Error(gen.data.message)
 
+      setResolvedJobId(jobIdFromQuery)
       dispatch(setTest({ testId: gen.data.data.testId, questions: gen.data.data.questions }))
       dispatch(setStatus('idle'))
     } catch (e: unknown) {
       dispatch(setError(getApiErrorMessage(e)))
       dispatch(setStatus('idle'))
     }
-  }, [applicantId, dispatch, jobId])
+  }, [applicantId, dispatch, jobIdFromQuery])
 
   useEffect(() => {
     void loadOrGenerate()
   }, [loadOrGenerate])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadApplicant = async (): Promise<void> => {
+      try {
+        const res = await api.get<ApiSuccess<ApplicantDetail> | ApiError>(`/api/applicants/detail/${applicantId}`)
+        if (!res.data.success) throw new Error(res.data.message)
+        const profile = res.data.data.profile
+        const name = `${profile?.firstName ?? ''} ${profile?.lastName ?? ''}`.trim() || 'Candidate'
+        if (!cancelled) setCandidateName(name)
+      } catch {
+        if (!cancelled) setCandidateName('Candidate')
+      }
+    }
+
+    void loadApplicant()
+    return () => {
+      cancelled = true
+    }
+  }, [applicantId])
 
   const submit = useCallback(
     async (answersOverride?: number[]): Promise<void> => {
@@ -361,7 +396,7 @@ export default function TestPage(): React.JSX.Element {
               {test.result.passed ? (
                 <button
                   type="button"
-                  onClick={() => router.push(`/applicants/${jobId}`)}
+                  onClick={() => router.push(`/applicants/${resolvedJobId}?applicantId=${applicantId}`)}
                   className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-semibold transition-colors"
                 >
                   View My Profile
@@ -377,7 +412,7 @@ export default function TestPage(): React.JSX.Element {
               )}
               <button
                 type="button"
-                onClick={() => router.push(`/applicants/${jobId}`)}
+                onClick={() => router.push(`/applicants/${resolvedJobId}?applicantId=${applicantId}`)}
                 className="w-full border border-slate-200 text-slate-700 hover:bg-slate-50 py-3 rounded-xl font-semibold transition-colors"
               >
                 Back to Profile
@@ -401,7 +436,7 @@ export default function TestPage(): React.JSX.Element {
               <Shield className="w-7 h-7" />
             </div>
             <div className="mt-4 text-2xl font-bold text-slate-900">Skill Verification Test</div>
-            <div className="mt-1 text-slate-500">Candidate</div>
+            <div className="mt-1 text-slate-500">Candidate: {candidateName}</div>
 
             <div className="mt-6 grid grid-cols-3 gap-3 w-full">
               <div className="bg-indigo-50 rounded-lg p-3 text-center">
@@ -635,4 +670,3 @@ export default function TestPage(): React.JSX.Element {
     </div>
   )
 }
-

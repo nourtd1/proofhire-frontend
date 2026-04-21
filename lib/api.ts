@@ -1,18 +1,37 @@
 import axios from 'axios'
 
-/** Lit le message renvoyé par l'API (body JSON) quand Axios signale une 4xx/5xx. */
+const normalizeApiMessage = (message: string): string => {
+  const lower = message.toLowerCase()
+
+  if (lower.includes('gemini api is disabled') || lower.includes('generative language api')) {
+    return 'AI features are unavailable because the Gemini API is not enabled for the configured Google project.'
+  }
+
+  if (lower.includes('gemini_api_key is missing')) {
+    return 'The backend is missing GEMINI_API_KEY.'
+  }
+
+  if (lower.includes('quota')) {
+    return 'The AI provider quota has been exhausted. Please try again later.'
+  }
+
+  return message
+}
+
 export function getApiErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
     const data = error.response?.data as { message?: string } | undefined
     if (typeof data?.message === 'string' && data.message.trim().length > 0) {
-      return data.message
+      return normalizeApiMessage(data.message)
     }
+
     const status = error.response?.status
     if (status != null) {
       return `Request failed (${status})`
     }
   }
-  if (error instanceof Error) return error.message
+
+  if (error instanceof Error) return normalizeApiMessage(error.message)
   return 'Unknown error'
 }
 
@@ -21,14 +40,19 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 60000, // 60 secondes (Gemini peut prendre du temps)
+  timeout: 60000,
 })
 
-// Interceptor pour logger les erreurs en dev
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('[API Error]', error.response?.data?.message || error.message)
+    const status = error.response?.status
+    const message = error.response?.data?.message || error.message
+
+    if (status == null || status >= 500) {
+      console.error('[API Error]', message)
+    }
+
     return Promise.reject(error)
   }
 )

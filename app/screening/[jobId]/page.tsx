@@ -2,9 +2,9 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
-import { ArrowLeft, RefreshCw, Zap } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Users, Zap } from 'lucide-react';
 import api, { getApiErrorMessage } from '@/lib/api';
 import type { RootState, AppDispatch } from '@/store';
 import { addJob } from '@/store/slices/jobsSlice';
@@ -70,6 +70,7 @@ const isValidMongoObjectId = (id: string | undefined): id is string =>
 export default function ScreeningJobPage(): React.JSX.Element {
   const params = useParams<{ jobId: string }>();
   const jobId = params.jobId;
+  const router = useRouter();
 
   const dispatch = useDispatch<AppDispatch>();
   const job = useSelector((s: RootState) => s.jobs.jobs.find((j) => j.id === jobId)) as JobWithExtras | undefined;
@@ -77,6 +78,7 @@ export default function ScreeningJobPage(): React.JSX.Element {
   const screening = useSelector((s: RootState) => s.screening);
 
   const [shortlist, setShortlist] = useState<10 | 20>(10);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   const fetchAll = useCallback(async (): Promise<void> => {
     dispatch(setError(null));
@@ -118,6 +120,7 @@ export default function ScreeningJobPage(): React.JSX.Element {
   const runScreening = useCallback(async (): Promise<void> => {
     dispatch(setError(null));
     dispatch(setLoading(true));
+    setStatusMessage(null);
     if (!isValidMongoObjectId(jobId)) {
       dispatch(setError('Invalid job ID.'));
       dispatch(setLoading(false));
@@ -128,6 +131,7 @@ export default function ScreeningJobPage(): React.JSX.Element {
       if (!res.data.success) throw new Error(res.data.message);
       dispatch(setResults(res.data.data));
       dispatch(setTriggered(true));
+      setStatusMessage(typeof res.data.message === 'string' ? res.data.message : 'Screening completed successfully.');
     } catch (e: unknown) {
       dispatch(setError(getApiErrorMessage(e)));
     } finally {
@@ -146,43 +150,101 @@ export default function ScreeningJobPage(): React.JSX.Element {
   const screenedOn = useMemo(() => formatDate(results[0]?.createdAt), [results]);
 
   const visibleResults = useMemo(() => results.slice(0, shortlist), [results, shortlist]);
+  const applicantCount = applicants.length;
+  const hasApplicants = applicantCount > 0;
 
   if (!hasResults && !screening.triggered) {
     return (
-      <div className="max-w-2xl mx-auto mt-16">
+      <div className="max-w-4xl mx-auto mt-10 space-y-6">
         {screening.error ? <ErrorMessage message={screening.error} onRetry={() => void fetchAll()} /> : null}
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 text-center">
-          <Zap className="w-16 h-16 text-indigo-300 mx-auto" />
-          <h1 className="text-2xl font-bold text-gray-800 mt-6">{job?.title ?? 'AI Screening'}</h1>
-          <p className="text-gray-500 mt-2">
-            ProofHire will analyze all candidates using Gemini AI and rank them by fit
-          </p>
-          <p className="text-gray-600 font-semibold mt-6">{applicants.length} candidates ready to be screened</p>
-
-          {!screening.loading ? (
-            <button
-              type="button"
-              onClick={() => void runScreening()}
-              className="mt-8 inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 text-lg rounded-xl font-semibold transition-colors shadow-sm shadow-indigo-200"
-            >
-              <Zap className="w-5 h-5" />
-              Run AI Screening
-            </button>
-          ) : (
-            <div className="mt-8 bg-gray-50 border border-gray-100 rounded-xl p-8">
-              <LoadingSpinner size="lg" />
-              <div className="mt-5 text-lg text-gray-600 font-semibold">Gemini AI is analyzing candidates...</div>
-              <div className="mt-3 flex items-center justify-center gap-2">
-                <span className="pulse-dot w-2 h-2 bg-indigo-400 rounded-full" />
-                <span className="pulse-dot w-2 h-2 bg-indigo-400 rounded-full" />
-                <span className="pulse-dot w-2 h-2 bg-indigo-400 rounded-full" />
-              </div>
-              <div className="mt-3 text-sm text-gray-500">This may take 15-30 seconds</div>
+        <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-10">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600">
+              <Zap className="w-7 h-7" />
             </div>
-          )}
+            <h1 className="text-3xl font-bold text-slate-900 mt-6">{job?.title ?? 'AI Screening'}</h1>
+            <p className="text-slate-500 mt-3 max-w-2xl">
+              Launch a full AI review for this role. ProofHire will compare every candidate against the job,
+              rank them by fit, and return strengths, gaps, and a hiring recommendation.
+            </p>
 
-          <p className="text-xs text-gray-400 mt-8">Powered by Gemini AI · African talent context-aware</p>
+            <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                <div className="text-sm font-semibold text-slate-900">1. Candidate intake</div>
+                <div className="mt-1 text-sm text-slate-500">Structured JSON or CSV import</div>
+              </div>
+              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                <div className="text-sm font-semibold text-slate-900">2. AI evaluation</div>
+                <div className="mt-1 text-sm text-slate-500">Gemini ranks every profile against the role</div>
+              </div>
+              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                <div className="text-sm font-semibold text-slate-900">3. Decision support</div>
+                <div className="mt-1 text-sm text-slate-500">Top matches, gaps, and recruiter-ready notes</div>
+              </div>
+            </div>
+
+            <div className="mt-8 flex flex-wrap items-center gap-4">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Candidates ready</div>
+                <div className="mt-1 text-2xl font-bold text-slate-900">{applicantCount}</div>
+              </div>
+
+              {!screening.loading ? (
+                <button
+                  type="button"
+                  onClick={() => void runScreening()}
+                  disabled={!hasApplicants}
+                  className="inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-6 py-3 rounded-xl font-semibold transition-colors shadow-sm shadow-indigo-200"
+                >
+                  <Zap className="w-5 h-5" />
+                  Run AI Screening
+                </button>
+              ) : (
+                <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-5 py-3">
+                  <LoadingSpinner size="sm" />
+                  <div>
+                    <div className="text-sm font-semibold text-slate-900">Screening in progress</div>
+                    <div className="text-sm text-slate-500">This usually takes 15 to 30 seconds.</div>
+                  </div>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => router.push(`/applicants/${jobId}`)}
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors font-medium"
+              >
+                <Users className="w-4 h-4" />
+                Manage Candidates
+              </button>
+            </div>
+
+            {!hasApplicants ? (
+              <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-amber-800">
+                Add at least one candidate before launching screening for this job.
+              </div>
+            ) : null}
+          </div>
+
+          <div className="bg-slate-900 text-white rounded-2xl p-8">
+            <div className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">What you get</div>
+            <div className="mt-6 space-y-5">
+              <div>
+                <div className="text-base font-semibold">Ranked shortlist</div>
+                <div className="mt-1 text-sm text-slate-300">Top 10 by default, with the option to expand to Top 20.</div>
+              </div>
+              <div>
+                <div className="text-base font-semibold">Transparent reasoning</div>
+                <div className="mt-1 text-sm text-slate-300">Each candidate includes strengths, gaps, and a recommendation.</div>
+              </div>
+              <div>
+                <div className="text-base font-semibold">Recruiter-friendly output</div>
+                <div className="mt-1 text-sm text-slate-300">Built to support final human decisions, not replace them.</div>
+              </div>
+            </div>
+            <div className="mt-8 text-xs text-slate-400">Powered by Gemini AI with backup scoring when the AI provider is unavailable.</div>
+          </div>
         </div>
       </div>
     );
@@ -210,6 +272,11 @@ export default function ScreeningJobPage(): React.JSX.Element {
       </div>
 
       {screening.error ? <ErrorMessage message={screening.error} onRetry={() => void fetchAll()} /> : null}
+      {statusMessage ? (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-800">
+          {statusMessage}
+        </div>
+      ) : null}
 
       <div className="bg-indigo-600 text-white rounded-xl p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
         <div>

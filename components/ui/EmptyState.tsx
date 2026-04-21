@@ -12,20 +12,25 @@ interface EmptyStateProps {
 
 export default function EmptyState({ icon: Icon, title, subtitle, action }: EmptyStateProps): React.JSX.Element {
   return (
-    <div className="flex flex-col items-center justify-center text-center py-16">
-      <Icon className="w-12 h-12 text-gray-300" />
-      <h3 className="text-lg font-semibold text-gray-700 mt-4">{title}</h3>
-      <p className="text-sm text-gray-400 mt-1 text-center max-w-xs">{subtitle}</p>
+    <div className="rounded-2xl border border-slate-100 bg-white px-8 py-14 shadow-sm">
+      <div className="flex flex-col items-center justify-center text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 border border-slate-100">
+          <Icon className="h-8 w-8 text-slate-300" />
+        </div>
+        <h3 className="mt-5 text-xl font-bold text-slate-900">{title}</h3>
+        <p className="mt-2 max-w-md text-sm text-slate-500">{subtitle}</p>
+      </div>
       {action ? (
-        <button
-          type="button"
-          onClick={action.onClick}
-          className="mt-6 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm shadow-indigo-200"
-        >
-          {action.label}
-        </button>
+        <div className="mt-8 flex justify-center">
+          <button
+            type="button"
+            onClick={action.onClick}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm shadow-indigo-200"
+          >
+            {action.label}
+          </button>
+        </div>
       ) : null}
     </div>
   );
 }
-

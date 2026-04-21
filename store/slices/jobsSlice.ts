@@ -7,6 +7,17 @@ interface JobsState {
   error: string | null;
 }
 
+const dedupeJobs = (jobs: Job[]): Job[] => {
+  const byId = new Map<string, Job>()
+
+  for (const job of jobs) {
+    if (!job.id) continue
+    byId.set(job.id, job)
+  }
+
+  return [...byId.values()]
+}
+
 const initialState: JobsState = {
   jobs: [],
   loading: false,
@@ -18,10 +29,19 @@ const jobsSlice = createSlice({
   initialState,
   reducers: {
     setJobs: (state, action: PayloadAction<Job[]>) => {
-      state.jobs = action.payload;
+      state.jobs = dedupeJobs(action.payload);
     },
     addJob: (state, action: PayloadAction<Job>) => {
-      state.jobs.push(action.payload);
+      const incoming = action.payload
+      if (!incoming.id) return
+
+      const existingIndex = state.jobs.findIndex((job) => job.id === incoming.id)
+      if (existingIndex >= 0) {
+        state.jobs[existingIndex] = incoming
+        return
+      }
+
+      state.jobs.push(incoming)
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.loading = action.payload;
