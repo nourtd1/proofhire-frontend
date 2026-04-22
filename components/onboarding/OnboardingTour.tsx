@@ -41,19 +41,15 @@ const TOUR_STEPS: TourStep[] = [
     route: '/dashboard',
     target: '[data-onboarding="dashboard-create-job"]',
     title: 'Start here: create your first job',
-    description: 'Click the highlighted button to open the job creation form. The tour will continue only after you really start that step.',
-    cta: 'Waiting for job setup',
-    requirement: 'startedJobCreation',
-    lockedMessage: 'Click "Create New Job" to continue the onboarding.',
+    description: 'Click the highlighted button to open the job creation form. Fill in the title, description, experience level and required skills.',
+    cta: 'Next: job form',
   },
   {
     route: '/jobs/new',
     target: '[data-onboarding="job-form"]',
     title: 'Set up the role details here',
-    description: 'Fill in the title, description, experience level, required skills, and requirements, then submit the form. The tour will continue after the job is really created.',
-    cta: 'Waiting for job creation',
-    requirement: 'createdJob',
-    lockedMessage: 'Create the job successfully to unlock the next step.',
+    description: 'Fill in the title, description, experience level, required skills, and requirements, then submit the form to create your first job.',
+    cta: 'Next: applicants',
   },
   {
     route: '/applicants',
@@ -70,6 +66,7 @@ const TOUR_STEPS: TourStep[] = [
     cta: 'Finish onboarding',
   },
 ];
+
 
 const clamp = (value: number, min: number, max: number): number => {
   return Math.min(Math.max(value, min), max);
