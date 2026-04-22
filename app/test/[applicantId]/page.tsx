@@ -109,6 +109,11 @@ const progressSegmentClass = (index: number, current: number): string => {
 
 const answerLetter = (index: number): string => ['A', 'B', 'C', 'D'][index] ?? '';
 
+const answerText = (options: string[], index: number): string => {
+  if (index < 0 || index >= options.length) return 'No answer';
+  return `${answerLetter(index)}. ${options[index]}`;
+};
+
 export default function TestPage(): React.JSX.Element {
   const router = useRouter();
   const params = useParams<{ applicantId: string }>();
@@ -418,7 +423,7 @@ export default function TestPage(): React.JSX.Element {
             onClick={() => setShowBreakdown((value) => !value)}
             className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-700"
           >
-            View detailed answers
+            {showBreakdown ? 'Hide detailed answers' : 'View my answers and corrections'}
             {showBreakdown ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </button>
 
@@ -441,16 +446,23 @@ export default function TestPage(): React.JSX.Element {
                       </div>
                     </div>
 
-                    {!isCorrect ? (
-                      <div className="mt-3 space-y-1 text-sm">
-                        <div className="text-slate-600">
-                          Your answer: <span className="font-medium text-slate-900">{answerLetter(yourAnswer)}</span>
-                        </div>
-                        <div className="text-emerald-700">
-                          Correct answer: <span className="font-semibold">{answerLetter(correctAnswer)}</span>
-                        </div>
+                    <div className="mt-3 space-y-2 text-sm">
+                      <div className="text-slate-600">
+                        Your answer:{' '}
+                        <span className="font-medium text-slate-900">
+                          {answerText(question.options, yourAnswer)}
+                        </span>
                       </div>
-                    ) : null}
+                      <div className="text-emerald-700">
+                        Correct answer:{' '}
+                        <span className="font-semibold">{answerText(question.options, correctAnswer)}</span>
+                      </div>
+                      {!isCorrect ? (
+                        <div className="text-rose-600">This question was answered incorrectly.</div>
+                      ) : (
+                        <div className="text-emerald-600">This question was answered correctly.</div>
+                      )}
+                    </div>
                   </div>
                 );
               })}

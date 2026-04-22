@@ -45,7 +45,17 @@ const initialState: TestState = {
   error: null,
 }
 
-const resetAnswers = (): number[] => [-1, -1, -1, -1, -1]
+const resetAnswers = (questionCount = 5): number[] => Array.from({ length: Math.max(0, questionCount) }, () => -1)
+
+const normalizeAnswers = (answers: number[], questionCount: number): number[] => {
+  const normalized = answers
+    .slice(0, questionCount)
+    .map((answer) => (Number.isInteger(answer) && answer >= 0 && answer <= 3 ? answer : -1))
+
+  if (normalized.length >= questionCount) return normalized
+
+  return [...normalized, ...resetAnswers(questionCount - normalized.length)]
+}
 
 const testSlice = createSlice({
   name: 'test',
@@ -55,7 +65,7 @@ const testSlice = createSlice({
       state.testId = action.payload.testId
       state.questions = action.payload.questions
       state.status = 'in_progress'
-      state.answers = resetAnswers()
+      state.answers = resetAnswers(action.payload.questions.length)
       state.currentQuestion = 0
       state.timeLeft = 300
       state.result = null
@@ -67,7 +77,7 @@ const testSlice = createSlice({
       state.answers[questionIndex] = answerIndex
     },
     nextQuestion: (state) => {
-      state.currentQuestion = Math.min(4, state.currentQuestion + 1)
+      state.currentQuestion = Math.min(Math.max(0, state.questions.length - 1), state.currentQuestion + 1)
     },
     prevQuestion: (state) => {
       state.currentQuestion = Math.max(0, state.currentQuestion - 1)
@@ -91,10 +101,10 @@ const testSlice = createSlice({
       state.timeLeft = Math.max(0, action.payload)
     },
     setAnswers: (state, action: PayloadAction<number[]>) => {
-      state.answers = action.payload
+      state.answers = normalizeAnswers(action.payload, state.questions.length || 5)
     },
     setCurrentQuestion: (state, action: PayloadAction<number>) => {
-      state.currentQuestion = Math.max(0, Math.min(4, action.payload))
+      state.currentQuestion = Math.max(0, Math.min(Math.max(0, state.questions.length - 1), action.payload))
     },
   },
 })
@@ -115,4 +125,3 @@ export const {
 } = testSlice.actions
 
 export default testSlice.reducer
-

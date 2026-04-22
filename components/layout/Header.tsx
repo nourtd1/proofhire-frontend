@@ -108,11 +108,11 @@ const Header = () => {
 
           <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2 sm:gap-3 sm:px-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700">
-              JD
+              PH
             </div>
             <div className="hidden md:block">
-              <p className="text-sm font-semibold text-slate-900 leading-none">James Doe</p>
-              <p className="mt-1 text-xs text-slate-500">Hiring Manager</p>
+              <p className="text-sm font-semibold leading-none text-slate-900">ProofHire Team</p>
+              <p className="mt-1 text-xs text-slate-500">Recruitment Workspace</p>
             </div>
           </div>
         </div>
