@@ -370,8 +370,8 @@ proofhire-frontend/
 | Name                     | Role                |
 | ------------------------ | ------------------- |
 | ANNOUR MAHAMAT ABDOULAYE | Full-Stack Engineer |
-| [Nom Membre 2]           | [Rôle]              |
-| [Nom Membre 3]           | [Rôle]              |
+| Moussa Mahamat           | Software            |
+| Mahamat Daoud ALi        | Datat Science       |
 
 ---
 

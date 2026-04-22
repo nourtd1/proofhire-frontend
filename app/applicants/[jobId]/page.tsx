@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
 import { CheckCircle2, Copy, MapPin, Upload, UserPlus, Users, Zap } from 'lucide-react';
@@ -244,6 +244,7 @@ export default function ApplicantsPage(): React.JSX.Element {
   const [profileError, setProfileError] = useState<string | null>(null);
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
   const [copiedApplicantId, setCopiedApplicantId] = useState<string | null>(null);
+  const structuredProfileFormRef = useRef<HTMLDivElement | null>(null);
 
   type JobWithExtras = Job & { skills?: string[]; experienceLevel?: string };
   const normalizeJob = useCallback(
@@ -395,6 +396,13 @@ export default function ApplicantsPage(): React.JSX.Element {
     }
   };
 
+  const focusStructuredProfileForm = useCallback((): void => {
+    setTab('platform');
+    window.requestAnimationFrame(() => {
+      structuredProfileFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, []);
+
   return (
     <div className="space-y-8">
       <div className="grid grid-cols-1 xl:grid-cols-[1.05fr_0.95fr] gap-6">
@@ -417,7 +425,7 @@ export default function ApplicantsPage(): React.JSX.Element {
             </button>
             <button
               type="button"
-              onClick={() => setTab('platform')}
+              onClick={focusStructuredProfileForm}
               className="border border-white/15 bg-white/5 hover:bg-white/10 text-white px-5 py-3 rounded-xl font-semibold transition-colors w-full sm:w-auto"
             >
               Add Candidate
@@ -486,7 +494,7 @@ export default function ApplicantsPage(): React.JSX.Element {
           </div>
 
           {tab === 'platform' ? (
-            <div className="space-y-4">
+            <div ref={structuredProfileFormRef} className="space-y-4">
               <div>
                 <h2 className="text-lg font-bold text-slate-900">Paste a structured candidate profile</h2>
                 <p className="text-slate-500 mt-1">
