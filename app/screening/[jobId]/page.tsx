@@ -4,9 +4,16 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
-import { ArrowLeft, RefreshCw, Users, Zap } from 'lucide-react';
+import {
+  ArrowLeft,
+  BriefcaseBusiness,
+  RefreshCw,
+  Sparkles,
+  Users,
+  Zap,
+} from 'lucide-react';
 import api, { getApiErrorMessage } from '@/lib/api';
-import type { RootState, AppDispatch } from '@/store';
+import type { AppDispatch, RootState } from '@/store';
 import { addJob } from '@/store/slices/jobsSlice';
 import { setApplicants } from '@/store/slices/applicantsSlice';
 import { setError, setLoading, setResults, setTriggered } from '@/store/slices/screeningSlice';
@@ -34,34 +41,39 @@ type BackendJob = {
 
 type JobWithExtras = Job & { skills?: string[]; experienceLevel?: string };
 
-const toIsoString = (d: string | Date | undefined): string => {
-  if (!d) return new Date().toISOString();
-  if (typeof d === 'string') return d;
-  return d.toISOString();
+const toIsoString = (value: string | Date | undefined): string => {
+  if (!value) return new Date().toISOString();
+  if (typeof value === 'string') return value;
+  return value.toISOString();
 };
 
 const normalizeJob = (raw: BackendJob): JobWithExtras => {
   const id = typeof raw.id === 'string' ? raw.id : typeof raw._id === 'string' ? raw._id : '';
+
   return {
     id,
     title: typeof raw.title === 'string' ? raw.title : '',
     description: typeof raw.description === 'string' ? raw.description : '',
     requirements: Array.isArray(raw.requirements)
-      ? raw.requirements.filter((x): x is string => typeof x === 'string')
+      ? raw.requirements.filter((item): item is string => typeof item === 'string')
       : [],
     status: raw.status ?? 'Open',
     createdAt: toIsoString(raw.createdAt),
     updatedAt: toIsoString(raw.updatedAt),
-    skills: Array.isArray(raw.skills) ? raw.skills.filter((x): x is string => typeof x === 'string') : [],
+    skills: Array.isArray(raw.skills) ? raw.skills.filter((item): item is string => typeof item === 'string') : [],
     experienceLevel: typeof raw.experienceLevel === 'string' ? raw.experienceLevel : '',
   };
 };
 
 const formatDate = (value: string | undefined): string => {
-  if (!value) return '—';
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return '—';
-  return new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).format(d);
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric',
+  }).format(date);
 };
 
 const isValidMongoObjectId = (id: string | undefined): id is string =>
@@ -73,9 +85,11 @@ export default function ScreeningJobPage(): React.JSX.Element {
   const router = useRouter();
 
   const dispatch = useDispatch<AppDispatch>();
-  const job = useSelector((s: RootState) => s.jobs.jobs.find((j) => j.id === jobId)) as JobWithExtras | undefined;
-  const applicants = useSelector((s: RootState) => s.applicants.applicants);
-  const screening = useSelector((s: RootState) => s.screening);
+  const job = useSelector((state: RootState) => state.jobs.jobs.find((item) => item.id === jobId)) as
+    | JobWithExtras
+    | undefined;
+  const applicants = useSelector((state: RootState) => state.applicants.applicants);
+  const screening = useSelector((state: RootState) => state.screening);
 
   const [shortlist, setShortlist] = useState<10 | 20>(10);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -83,11 +97,13 @@ export default function ScreeningJobPage(): React.JSX.Element {
   const fetchAll = useCallback(async (): Promise<void> => {
     dispatch(setError(null));
     dispatch(setLoading(true));
+
     if (!isValidMongoObjectId(jobId)) {
       dispatch(setError('Invalid job ID in the URL.'));
       dispatch(setLoading(false));
       return;
     }
+
     try {
       const [jobRes, applicantsRes, resultsRes] = await Promise.all([
         api.get<ApiSuccess<BackendJob> | ApiError>(`/api/jobs/${jobId}`),
@@ -100,40 +116,49 @@ export default function ScreeningJobPage(): React.JSX.Element {
       if (!resultsRes.data.success) throw new Error(resultsRes.data.message);
 
       dispatch(addJob(normalizeJob(jobRes.data.data)));
-      dispatch(setApplicants(applicantsRes.data.data as unknown as RootState['applicants']['applicants']));
+      dispatch(setApplicants(applicantsRes.data.data as RootState['applicants']['applicants']));
 
       const results = resultsRes.data.data ?? [];
       dispatch(setResults(results));
       dispatch(setTriggered(results.length > 0));
-    } catch (e: unknown) {
-      dispatch(setError(getApiErrorMessage(e)));
+    } catch (error: unknown) {
+      dispatch(setError(getApiErrorMessage(error)));
     } finally {
       dispatch(setLoading(false));
     }
   }, [dispatch, jobId]);
 
   useEffect(() => {
-    const t = setTimeout(() => void fetchAll(), 0);
-    return () => clearTimeout(t);
+    const timeout = setTimeout(() => void fetchAll(), 0);
+    return () => clearTimeout(timeout);
   }, [fetchAll]);
 
   const runScreening = useCallback(async (): Promise<void> => {
     dispatch(setError(null));
     dispatch(setLoading(true));
     setStatusMessage(null);
+
     if (!isValidMongoObjectId(jobId)) {
       dispatch(setError('Invalid job ID.'));
       dispatch(setLoading(false));
       return;
     }
+
     try {
-      const res = await api.post<ApiSuccess<ScreeningResultWithApplicant[]> | ApiError>('/api/screening/run', { jobId });
-      if (!res.data.success) throw new Error(res.data.message);
-      dispatch(setResults(res.data.data));
+      const response = await api.post<ApiSuccess<ScreeningResultWithApplicant[]> | ApiError>(
+        '/api/screening/run',
+        { jobId }
+      );
+
+      if (!response.data.success) throw new Error(response.data.message);
+
+      dispatch(setResults(response.data.data));
       dispatch(setTriggered(true));
-      setStatusMessage(typeof res.data.message === 'string' ? res.data.message : 'Screening completed successfully.');
-    } catch (e: unknown) {
-      dispatch(setError(getApiErrorMessage(e)));
+      setStatusMessage(
+        typeof response.data.message === 'string' ? response.data.message : 'Screening completed successfully.'
+      );
+    } catch (error: unknown) {
+      dispatch(setError(getApiErrorMessage(error)));
     } finally {
       dispatch(setLoading(false));
     }
@@ -141,201 +166,292 @@ export default function ScreeningJobPage(): React.JSX.Element {
 
   const results = screening.results;
   const hasResults = results.length > 0;
-
-  const topHireCount = useMemo(() => results.filter((r) => r.recommendation === 'Hire').length, [results]);
-  const avgScore = useMemo(() => {
-    if (results.length === 0) return 0;
-    return Math.round(results.reduce((acc, r) => acc + r.matchScore, 0) / results.length);
-  }, [results]);
-  const screenedOn = useMemo(() => formatDate(results[0]?.createdAt), [results]);
-
-  const visibleResults = useMemo(() => results.slice(0, shortlist), [results, shortlist]);
   const applicantCount = applicants.length;
   const hasApplicants = applicantCount > 0;
+  const topHireCount = useMemo(
+    () => results.filter((result) => result.recommendation === 'Hire').length,
+    [results]
+  );
+  const avgScore = useMemo(() => {
+    if (results.length === 0) return 0;
+    return Math.round(results.reduce((total, result) => total + result.matchScore, 0) / results.length);
+  }, [results]);
+  const screenedOn = useMemo(() => formatDate(results[0]?.createdAt), [results]);
+  const visibleResults = useMemo(() => results.slice(0, shortlist), [results, shortlist]);
+
+  const jobSkills = useMemo(
+    () => (Array.isArray(job?.skills) ? job.skills.filter((skill): skill is string => Boolean(skill)) : []),
+    [job?.skills]
+  );
 
   if (!hasResults && !screening.triggered) {
     return (
-      <div className="max-w-4xl mx-auto mt-10 space-y-6">
+      <div className="mx-auto max-w-6xl space-y-6">
         {screening.error ? <ErrorMessage message={screening.error} onRetry={() => void fetchAll()} /> : null}
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-6">
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-10">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600">
-              <Zap className="w-7 h-7" />
-            </div>
-            <h1 className="text-3xl font-bold text-slate-900 mt-6">{job?.title ?? 'AI Screening'}</h1>
-            <p className="text-slate-500 mt-3 max-w-2xl">
-              Launch a full AI review for this role. ProofHire will compare every candidate against the job,
-              rank them by fit, and return strengths, gaps, and a hiring recommendation.
-            </p>
-
-            <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                <div className="text-sm font-semibold text-slate-900">1. Candidate intake</div>
-                <div className="mt-1 text-sm text-slate-500">Structured JSON or CSV import</div>
-              </div>
-              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                <div className="text-sm font-semibold text-slate-900">2. AI evaluation</div>
-                <div className="mt-1 text-sm text-slate-500">Gemini ranks every profile against the role</div>
-              </div>
-              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                <div className="text-sm font-semibold text-slate-900">3. Decision support</div>
-                <div className="mt-1 text-sm text-slate-500">Top matches, gaps, and recruiter-ready notes</div>
-              </div>
-            </div>
-
-            <div className="mt-8 flex flex-wrap items-center gap-4">
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Candidates ready</div>
-                <div className="mt-1 text-2xl font-bold text-slate-900">{applicantCount}</div>
+        <section className="overflow-hidden rounded-[32px] bg-slate-950 text-white shadow-[0_30px_90px_rgba(15,23,42,0.18)]">
+          <div className="grid gap-8 p-6 sm:p-8 lg:grid-cols-[1.15fr_0.85fr] lg:p-10">
+            <div className="space-y-6">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-200">
+                <Sparkles className="h-3.5 w-3.5" />
+                AI Screening Workspace
               </div>
 
-              {!screening.loading ? (
+              <div>
+                <h1 className="max-w-3xl text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                  {job?.title ?? 'Launch AI screening for this role'}
+                </h1>
+                <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
+                  Review every candidate in one run. ProofHire compares each profile against the role, ranks the
+                  shortlist, and returns strengths, gaps, and a recruiter-ready recommendation.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-3 text-sm text-slate-200">
+                {job?.experienceLevel ? (
+                  <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5">
+                    Level: {job.experienceLevel}
+                  </span>
+                ) : null}
+                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5">
+                  Candidates ready: {applicantCount}
+                </span>
+                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5">
+                  Ranking: Top 10 or Top 20
+                </span>
+              </div>
+
+              {jobSkills.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {jobSkills.slice(0, 6).map((skill) => (
+                    <span
+                      key={skill}
+                      className="rounded-full border border-indigo-400/30 bg-indigo-500/15 px-3 py-1 text-xs font-medium text-indigo-100"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+
+              <div className="flex flex-col gap-3 sm:flex-row">
+                {!screening.loading ? (
+                  <button
+                    type="button"
+                    onClick={() => void runScreening()}
+                    disabled={!hasApplicants}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 font-semibold text-slate-950 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:bg-slate-300"
+                  >
+                    <Zap className="h-5 w-5" />
+                    Run AI Screening
+                  </button>
+                ) : (
+                  <div className="inline-flex items-center gap-3 rounded-2xl border border-white/10 bg-white/10 px-5 py-3 text-sm text-slate-100">
+                    <LoadingSpinner size="sm" />
+                    Screening in progress. This usually takes 15 to 30 seconds.
+                  </div>
+                )}
+
                 <button
                   type="button"
-                  onClick={() => void runScreening()}
-                  disabled={!hasApplicants}
-                  className="inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-6 py-3 rounded-xl font-semibold transition-colors shadow-sm shadow-indigo-200"
+                  onClick={() => router.push(`/applicants/${jobId}`)}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-5 py-3 font-medium text-white transition hover:bg-white/10"
                 >
-                  <Zap className="w-5 h-5" />
-                  Run AI Screening
+                  <Users className="h-4 w-4" />
+                  Manage Candidates
                 </button>
-              ) : (
-                <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-5 py-3">
-                  <LoadingSpinner size="sm" />
-                  <div>
-                    <div className="text-sm font-semibold text-slate-900">Screening in progress</div>
-                    <div className="text-sm text-slate-500">This usually takes 15 to 30 seconds.</div>
+              </div>
+
+              {!hasApplicants ? (
+                <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-4 text-sm text-amber-100">
+                  Add at least one candidate before launching screening for this role.
+                </div>
+              ) : null}
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+              <div className="rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur">
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">How it works</div>
+                <div className="mt-4 space-y-4">
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="text-sm font-semibold text-white">1. Candidate intake</div>
+                    <div className="mt-1 text-sm text-slate-300">Structured JSON profiles or CSV import.</div>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="text-sm font-semibold text-white">2. AI review</div>
+                    <div className="mt-1 text-sm text-slate-300">Gemini evaluates every profile against the role.</div>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="text-sm font-semibold text-white">3. Ranking output</div>
+                    <div className="mt-1 text-sm text-slate-300">
+                      You get scores, recommendation, strengths, and hiring gaps.
+                    </div>
                   </div>
                 </div>
-              )}
-
-              <button
-                type="button"
-                onClick={() => router.push(`/applicants/${jobId}`)}
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors font-medium"
-              >
-                <Users className="w-4 h-4" />
-                Manage Candidates
-              </button>
-            </div>
-
-            {!hasApplicants ? (
-              <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-amber-800">
-                Add at least one candidate before launching screening for this job.
               </div>
-            ) : null}
-          </div>
 
-          <div className="bg-slate-900 text-white rounded-2xl p-8">
-            <div className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">What you get</div>
-            <div className="mt-6 space-y-5">
-              <div>
-                <div className="text-base font-semibold">Ranked shortlist</div>
-                <div className="mt-1 text-sm text-slate-300">Top 10 by default, with the option to expand to Top 20.</div>
-              </div>
-              <div>
-                <div className="text-base font-semibold">Transparent reasoning</div>
-                <div className="mt-1 text-sm text-slate-300">Each candidate includes strengths, gaps, and a recommendation.</div>
-              </div>
-              <div>
-                <div className="text-base font-semibold">Recruiter-friendly output</div>
-                <div className="mt-1 text-sm text-slate-300">Built to support final human decisions, not replace them.</div>
+              <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-indigo-500/20 to-cyan-400/10 p-5">
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">Recruiter value</div>
+                <div className="mt-4 text-2xl font-semibold text-white">Fast shortlist, human decision.</div>
+                <p className="mt-3 text-sm leading-7 text-slate-300">
+                  ProofHire accelerates screening, but the final hiring call stays in the recruiter’s hands.
+                </p>
+                <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs text-slate-200">
+                  <BriefcaseBusiness className="h-3.5 w-3.5" />
+                  Backup scoring is available if the AI provider is temporarily unavailable.
+                </div>
               </div>
             </div>
-            <div className="mt-8 text-xs text-slate-400">Powered by Gemini AI with backup scoring when the AI provider is unavailable.</div>
           </div>
-        </div>
+        </section>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="sticky top-16 bg-white shadow-sm border border-gray-100 rounded-xl px-4 py-3 flex items-center justify-between">
-        <Link href="/jobs" className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900">
-          <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm font-medium">Back to Jobs</span>
-        </Link>
-        <div className="text-center">
-          <div className="font-semibold text-gray-800">{job?.title ?? 'Job'}</div>
-          <div className="text-xs text-gray-400">AI Screening Results</div>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <section className="overflow-hidden rounded-[32px] bg-slate-950 text-white shadow-[0_30px_90px_rgba(15,23,42,0.18)]">
+        <div className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:p-10">
+          <div className="space-y-6">
+            <Link
+              href="/jobs"
+              className="inline-flex items-center gap-2 text-sm font-medium text-slate-300 transition hover:text-white"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Jobs
+            </Link>
+
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-200">
+                <Sparkles className="h-3.5 w-3.5" />
+                Screening Results
+              </div>
+              <h1 className="mt-4 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                {job?.title ?? 'AI Screening Results'}
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
+                Review the ranked shortlist, compare fit scores, and decide which candidates should move to the next
+                stage.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-3 text-sm text-slate-200">
+              {job?.experienceLevel ? (
+                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5">
+                  Level: {job.experienceLevel}
+                </span>
+              ) : null}
+              <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5">
+                Candidates analyzed: {results.length}
+              </span>
+              <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5">
+                Last run: {screenedOn}
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => void runScreening()}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 font-semibold text-slate-950 transition hover:bg-slate-100"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Re-run Screening
+              </button>
+
+              <button
+                type="button"
+                onClick={() => router.push(`/applicants/${jobId}`)}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-5 py-3 font-medium text-white transition hover:bg-white/10"
+              >
+                <Users className="h-4 w-4" />
+                Open Candidate Workspace
+              </button>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Average fit</div>
+              <div className="mt-3 text-4xl font-semibold text-white">{avgScore}/100</div>
+              <div className="mt-2 text-sm text-slate-300">Overall match quality across the full shortlist.</div>
+            </div>
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Hire signals</div>
+              <div className="mt-3 text-4xl font-semibold text-white">{topHireCount}</div>
+              <div className="mt-2 text-sm text-slate-300">Candidates currently recommended as “Hire”.</div>
+            </div>
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Profiles reviewed</div>
+              <div className="mt-3 text-4xl font-semibold text-white">{results.length}</div>
+              <div className="mt-2 text-sm text-slate-300">The AI processed the full candidate batch in one run.</div>
+            </div>
+            <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-indigo-500/20 to-cyan-400/10 p-5">
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">Shortlist view</div>
+              <div className="mt-3 text-4xl font-semibold text-white">Top {shortlist}</div>
+              <div className="mt-2 text-sm text-slate-200">Switch between a focused top 10 and an expanded top 20.</div>
+            </div>
+          </div>
         </div>
-        <button
-          type="button"
-          onClick={() => void runScreening()}
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-indigo-200 text-indigo-700 hover:bg-indigo-50 transition-colors text-sm font-medium"
-        >
-          <RefreshCw className="w-4 h-4" />
-          Re-run Screening
-        </button>
-      </div>
+      </section>
 
       {screening.error ? <ErrorMessage message={screening.error} onRetry={() => void fetchAll()} /> : null}
       {statusMessage ? (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-800">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           {statusMessage}
         </div>
       ) : null}
 
-      <div className="bg-indigo-600 text-white rounded-xl p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div>
-          <div className="text-2xl font-bold">{results.length}</div>
-          <div className="text-xs opacity-80">Analyzed</div>
-        </div>
-        <div>
-          <div className="text-2xl font-bold">{topHireCount}</div>
-          <div className="text-xs opacity-80">Top Candidates</div>
-        </div>
-        <div>
-          <div className="text-2xl font-bold">{avgScore}</div>
-          <div className="text-xs opacity-80">Avg Score</div>
-        </div>
-        <div>
-          <div className="text-2xl font-bold">{screenedOn}</div>
-          <div className="text-xs opacity-80">Screened On</div>
-        </div>
-      </div>
-
       {!screening.loading && results.length === 0 ? (
         <EmptyState
           icon={Zap}
-          title="No screening results"
-          subtitle="Click 'Run AI Screening' to analyze your candidates"
+          title="No screening results yet"
+          subtitle="Run AI screening to generate a ranked shortlist for this role."
           action={{ label: 'Run AI Screening', onClick: () => void runScreening() }}
         />
       ) : null}
 
-      <div className="flex items-center justify-center">
-        <div className="bg-indigo-600 rounded-full p-1 inline-flex gap-1 text-white">
-          <button
-            type="button"
-            onClick={() => setShortlist(10)}
-            className={[
-              'px-4 py-2 rounded-full text-sm font-semibold transition-colors',
-              shortlist === 10 ? 'bg-white text-indigo-700' : 'bg-transparent text-white/90 hover:bg-white/10',
-            ].join(' ')}
-          >
-            Top 10
-          </button>
-          <button
-            type="button"
-            onClick={() => setShortlist(20)}
-            className={[
-              'px-4 py-2 rounded-full text-sm font-semibold transition-colors',
-              shortlist === 20 ? 'bg-white text-indigo-700' : 'bg-transparent text-white/90 hover:bg-white/10',
-            ].join(' ')}
-          >
-            Top 20
-          </button>
-        </div>
-      </div>
+      <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <div className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">Ranked shortlist</div>
+            <h2 className="mt-2 text-2xl font-semibold text-slate-950">Review the best-fit candidates first</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600">
+              Each card includes match score, recommendation, strengths, gaps, and a direct path to candidate
+              verification.
+            </p>
+          </div>
 
-      <div className="space-y-3">
-        {visibleResults.map((r, idx) => (
-          <ResultCard key={r._id} result={r} animationDelay={idx * 100} />
-        ))}
-      </div>
+          <div className="inline-flex rounded-full border border-slate-200 bg-slate-100 p-1">
+            <button
+              type="button"
+              onClick={() => setShortlist(10)}
+              className={[
+                'rounded-full px-4 py-2 text-sm font-semibold transition-colors',
+                shortlist === 10 ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-600 hover:text-slate-900',
+              ].join(' ')}
+            >
+              Top 10
+            </button>
+            <button
+              type="button"
+              onClick={() => setShortlist(20)}
+              className={[
+                'rounded-full px-4 py-2 text-sm font-semibold transition-colors',
+                shortlist === 20 ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-600 hover:text-slate-900',
+              ].join(' ')}
+            >
+              Top 20
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-6 space-y-4">
+          {visibleResults.map((result, index) => (
+            <ResultCard key={result._id} result={result} animationDelay={index * 100} />
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

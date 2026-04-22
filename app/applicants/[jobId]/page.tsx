@@ -397,18 +397,51 @@ export default function ApplicantsPage(): React.JSX.Element {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">{jobFromStore?.title ?? 'Applicants'}</h1>
-          <p className="text-slate-500 mt-1">{applicantsCount} candidates attached to this job</p>
+      <div className="grid grid-cols-1 xl:grid-cols-[1.05fr_0.95fr] gap-6">
+        <div className="rounded-3xl bg-slate-900 px-6 py-7 text-white sm:px-8">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
+            Candidate Intake
+          </div>
+          <h1 className="mt-4 text-3xl font-bold sm:text-4xl">{jobFromStore?.title ?? 'Applicants'}</h1>
+          <p className="mt-3 max-w-2xl text-sm text-slate-300 sm:text-base">
+            Add structured profiles or import a CSV, then move directly into AI ranking and skill verification for this role.
+          </p>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => router.push(`/screening/${jobId}`)}
+              className="bg-white text-slate-900 hover:bg-slate-100 px-5 py-3 rounded-xl font-semibold transition-colors shadow-sm w-full sm:w-auto inline-flex items-center justify-center gap-2"
+            >
+              <Zap size={18} />
+              Run AI Screening
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab('platform')}
+              className="border border-white/15 bg-white/5 hover:bg-white/10 text-white px-5 py-3 rounded-xl font-semibold transition-colors w-full sm:w-auto"
+            >
+              Add Candidate
+            </button>
+          </div>
         </div>
-        <button
-          type="button"
-          onClick={() => router.push(`/screening/${jobId}`)}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm shadow-indigo-200"
-        >
-          Run AI Screening
-        </button>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-1 gap-4">
+          <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total candidates</div>
+            <div className="mt-2 text-3xl font-bold text-slate-900">{applicantsCount}</div>
+            <div className="mt-1 text-sm text-slate-500">All profiles attached to this role</div>
+          </div>
+          <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Structured profiles</div>
+            <div className="mt-2 text-3xl font-bold text-slate-900">{platformApplicants.length}</div>
+            <div className="mt-1 text-sm text-slate-500">Profiles pasted from JSON format</div>
+          </div>
+          <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Verified</div>
+            <div className="mt-2 text-3xl font-bold text-slate-900">{uiApplicants.filter((a) => a.isVerified).length}</div>
+            <div className="mt-1 text-sm text-slate-500">Candidates who passed the skill test</div>
+          </div>
+        </div>
       </div>
 
       {error ? (
@@ -418,8 +451,14 @@ export default function ApplicantsPage(): React.JSX.Element {
       ) : null}
 
       <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr] gap-8 items-start">
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 space-y-6">
-          <div className="flex items-center gap-2">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 sm:p-8 space-y-6">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Choose how you want to add candidates</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Structured JSON is ideal for richer profiles. CSV import is best when onboarding multiple candidates quickly.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => setTab('platform')}
@@ -559,7 +598,7 @@ export default function ApplicantsPage(): React.JSX.Element {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-100">
+          <div className="px-5 py-5 sm:px-6 border-b border-slate-100">
             <h2 className="text-lg font-bold text-slate-900">
               {tab === 'platform' ? 'Structured Profiles' : 'Uploaded Applicants'}
             </h2>
@@ -589,17 +628,20 @@ export default function ApplicantsPage(): React.JSX.Element {
                   key={applicant.id}
                   id={`applicant-${applicant.id}`}
                   className={[
-                    'p-6 scroll-mt-24 transition-all',
+                    'p-5 sm:p-6 scroll-mt-24 transition-all',
                     applicant.id === highlightedApplicantId
                       ? 'bg-indigo-50/70 ring-1 ring-indigo-200'
                       : '',
                   ].join(' ')}
                 >
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="font-bold text-slate-900 truncate">{applicant.fullName}</h3>
                         {applicant.isVerified ? <VerifiedBadge size="sm" showLabel={true} /> : null}
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+                          {applicant.source === 'platform' ? 'JSON Profile' : 'CSV Import'}
+                        </span>
                         {applicant.id === highlightedApplicantId ? (
                           <span className="px-3 py-1 rounded-full text-xs font-semibold bg-indigo-600 text-white">
                             Open Profile
@@ -636,13 +678,13 @@ export default function ApplicantsPage(): React.JSX.Element {
                         </div>
                       ) : null}
 
-                      <div className="flex flex-wrap gap-3 mt-5">
+                      <div className="flex flex-col gap-3 mt-5 sm:flex-row sm:flex-wrap">
                         <button
                           type="button"
                           disabled={applicant.isVerified}
                           onClick={() => router.push(`/test/${applicant.id}?jobId=${jobId}`)}
                           className={[
-                            'px-4 py-2 rounded-lg text-sm font-semibold transition-colors inline-flex items-center gap-2',
+                            'px-4 py-3 rounded-lg text-sm font-semibold transition-colors inline-flex items-center justify-center gap-2',
                             applicant.isVerified
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-not-allowed'
                               : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shadow-indigo-200',
@@ -655,7 +697,7 @@ export default function ApplicantsPage(): React.JSX.Element {
                         <button
                           type="button"
                           onClick={() => void copyTestLink(applicant.id)}
-                          className="px-4 py-2 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 text-sm font-semibold inline-flex items-center gap-2 transition-colors"
+                          className="px-4 py-3 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 text-sm font-semibold inline-flex items-center justify-center gap-2 transition-colors"
                         >
                           <Copy size={16} />
                           {copiedApplicantId === applicant.id ? 'Link Copied' : 'Copy Test Link'}
@@ -664,7 +706,7 @@ export default function ApplicantsPage(): React.JSX.Element {
                     </div>
 
                     {applicant.isVerified ? (
-                      <div className="shrink-0 rounded-full bg-emerald-50 p-3 text-emerald-600">
+                      <div className="hidden sm:block shrink-0 rounded-full bg-emerald-50 p-3 text-emerald-600">
                         <CheckCircle2 size={20} />
                       </div>
                     ) : null}

@@ -82,8 +82,8 @@ const ResultCard: React.FC<ResultCardProps> = ({ result, animationDelay = 0 }) =
       ].join(' ')}
       style={{ animationDelay: `${animationDelay}ms`, animationFillMode: 'forwards' }}
     >
-      <div className="p-6">
-        <div className="flex items-start justify-between gap-6">
+      <div className="p-5 sm:p-6">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-start gap-4 min-w-0">
             <div
               className={[
@@ -106,7 +106,7 @@ const ResultCard: React.FC<ResultCardProps> = ({ result, animationDelay = 0 }) =
             </div>
           </div>
 
-          <div className="flex flex-col items-center shrink-0">
+          <div className="flex items-center justify-between gap-4 lg:flex-col lg:items-center shrink-0">
             <div className="relative w-[72px] h-[72px]">
               <svg width="72" height="72" viewBox="0 0 72 72">
                 <circle cx="36" cy="36" r={radius} stroke="#e5e7eb" strokeWidth="8" fill="none" />
@@ -131,7 +131,7 @@ const ResultCard: React.FC<ResultCardProps> = ({ result, animationDelay = 0 }) =
             <div className="text-xs text-gray-400 mt-2">Match Score</div>
           </div>
 
-          <div className="flex flex-col items-end gap-2 shrink-0">
+          <div className="flex flex-col items-start gap-2 shrink-0 lg:items-end">
             <span
               className={[
                 'px-4 py-1.5 rounded-full text-sm font-semibold uppercase tracking-wide',
@@ -154,6 +154,7 @@ const ResultCard: React.FC<ResultCardProps> = ({ result, animationDelay = 0 }) =
               type="button"
               onClick={() => setOpen((v) => !v)}
               className="text-indigo-600 text-sm font-medium inline-flex items-center gap-1"
+              aria-expanded={open}
             >
               {open ? 'Hide Details' : 'View Details'}
               {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}

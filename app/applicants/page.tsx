@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useDispatch, useSelector } from 'react-redux';
-import { ArrowRight, Briefcase, Users } from 'lucide-react';
+import { ArrowRight, Briefcase, FolderOpen, Sparkles, Users } from 'lucide-react';
 import api, { getApiErrorMessage } from '@/lib/api';
 import type { RootState, AppDispatch } from '@/store';
 import { setJobs, setLoading, setError } from '@/store/slices/jobsSlice';
@@ -89,13 +89,71 @@ export default function ApplicantsIndexPage(): React.JSX.Element {
     () => [...jobs].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
     [jobs]
   );
+  const recentJobs = useMemo(() => sortedJobs.slice(0, 4), [sortedJobs]);
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Applications</h1>
-          <p className="text-slate-500 mt-1">Choose a job to manage candidate applications.</p>
+      <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-6">
+        <div data-onboarding="applicants-workspace" className="rounded-3xl bg-slate-900 px-6 py-7 text-white sm:px-8">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
+            Candidate Workspace
+          </div>
+          <h1 className="mt-4 text-3xl font-bold sm:text-4xl">Bring every application into one clean intake flow.</h1>
+          <p className="mt-3 max-w-2xl text-sm text-slate-300 sm:text-base">
+            Choose a role, add structured profiles or CSV imports, then move directly into AI screening and test distribution.
+          </p>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <Link
+              href="/jobs/new"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 font-semibold text-slate-900 transition-colors hover:bg-slate-100"
+            >
+              <Briefcase size={18} />
+              Create Job
+            </Link>
+            <Link
+              href="/jobs"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-3 font-semibold text-white transition-colors hover:bg-white/10"
+            >
+              View All Jobs
+              <ArrowRight size={18} />
+            </Link>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-1 gap-4">
+          <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+                <FolderOpen size={20} />
+              </div>
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Open jobs</div>
+                <div className="mt-1 text-2xl font-bold text-slate-900">{jobs.length}</div>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
+                <Users size={20} />
+              </div>
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Application hubs</div>
+                <div className="mt-1 text-2xl font-bold text-slate-900">{recentJobs.length}</div>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
+                <Sparkles size={20} />
+              </div>
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Ready for intake</div>
+                <div className="mt-1 text-2xl font-bold text-slate-900">{jobs.length}</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -139,7 +197,7 @@ export default function ApplicantsIndexPage(): React.JSX.Element {
             const shownSkills = (extras.skills ?? []).slice(0, 4);
 
             return (
-              <div key={job.id} className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
+              <div key={job.id} className="bg-white rounded-3xl border border-slate-100 p-5 sm:p-6 shadow-sm">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-3">
@@ -167,10 +225,13 @@ export default function ApplicantsIndexPage(): React.JSX.Element {
                   </div>
                 ) : null}
 
-                <div className="mt-6">
+                <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="text-sm text-slate-500">
+                    Open this workspace to add profiles, import CSVs, and send skill tests.
+                  </div>
                   <Link
                     href={`/applicants/${job.id}`}
-                    className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors shadow-sm shadow-indigo-200"
+                    className="inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-xl font-medium transition-colors shadow-sm shadow-indigo-200"
                   >
                     Open Applications
                     <ArrowRight size={18} />

@@ -4,8 +4,9 @@ import React, { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDispatch } from 'react-redux';
 import Link from 'next/link';
-import { ArrowLeft, Plus, X, Loader2 } from 'lucide-react';
+import { ArrowLeft, Briefcase, CheckCircle2, Loader2, Plus, Sparkles, X } from 'lucide-react';
 import api, { getApiErrorMessage } from '@/lib/api';
+import { writeOnboardingProgress } from '@/lib/onboarding';
 import { addJob, setError } from '@/store/slices/jobsSlice';
 import type { AppDispatch } from '@/store';
 import type { Job } from '@/types';
@@ -122,6 +123,7 @@ const CreateJobPage: React.FC = () => {
       if (!res.data.success) throw new Error(res.data.message);
 
       const job = normalizeJob(res.data.data);
+      writeOnboardingProgress({ createdJob: true });
       dispatch(addJob(job));
       router.push('/jobs');
     } catch (err: unknown) {
@@ -134,23 +136,80 @@ const CreateJobPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-120px)] flex items-start justify-center py-10">
-      <div className="w-full max-w-[680px]">
-        <div className="flex items-center gap-4 mb-6">
-          <Link
-            href="/jobs"
-            className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-600"
-            aria-label="Back to jobs"
-          >
-            <ArrowLeft size={22} />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Create Job</h1>
-            <p className="text-slate-500 mt-1">Define the role and requirements to start screening.</p>
+    <div className="min-h-[calc(100vh-120px)] py-4 sm:py-10">
+      <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-8 xl:grid-cols-[0.95fr_1.05fr]">
+        <div className="space-y-6">
+          <div className="flex items-center gap-4">
+            <Link
+              href="/jobs"
+              className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-600"
+              aria-label="Back to jobs"
+            >
+              <ArrowLeft size={22} />
+            </Link>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900">Create Job</h1>
+              <p className="text-slate-500 mt-1">Set up the role once, then move directly into candidate intake and screening.</p>
+            </div>
+          </div>
+
+          <div className="rounded-3xl bg-slate-900 px-6 py-7 text-white">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
+              Role Setup
+            </div>
+            <h2 className="mt-4 text-3xl font-bold">Design a role recruiters can act on immediately.</h2>
+            <p className="mt-3 text-sm leading-6 text-slate-300">
+              A strong job setup helps ProofHire compare candidates more accurately and keeps the shortlist easier to trust.
+            </p>
+
+            <div className="mt-6 space-y-3">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-white">
+                    <Briefcase size={18} />
+                  </div>
+                  <div>
+                    <div className="font-semibold">Clear hiring signal</div>
+                    <div className="mt-1 text-sm text-slate-300">Skills, level, and requirements guide ranking quality.</div>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-white">
+                    <Sparkles size={18} />
+                  </div>
+                  <div>
+                    <div className="font-semibold">Faster recruiter workflow</div>
+                    <div className="mt-1 text-sm text-slate-300">Once created, the same role powers intake, screening, and testing.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+            <div className="text-sm font-semibold text-slate-900">Recommended checklist</div>
+            <div className="mt-4 space-y-3">
+              {[
+                'Use a precise title recruiters and candidates both understand.',
+                'List the key technologies the role truly depends on.',
+                'Keep requirements concrete and easy to verify during screening.',
+              ].map((item) => (
+                <div key={item} className="flex items-start gap-3 text-sm text-slate-600">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500 shrink-0" />
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
-        <form onSubmit={onSubmit} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 space-y-6">
+        <form
+          onSubmit={onSubmit}
+          data-onboarding="job-form"
+          className="bg-white rounded-3xl shadow-sm border border-slate-100 p-5 sm:p-8 space-y-6"
+        >
           {submitError ? (
             <div className="rounded-xl border border-red-200 bg-red-50 text-red-700 px-4 py-3">
               {submitError}
@@ -198,7 +257,7 @@ const CreateJobPage: React.FC = () => {
 
           <div className="space-y-2">
             <label className="text-sm font-semibold text-slate-700">Required Skills</label>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <input
                 value={skillInput}
                 onChange={(e) => setSkillInput(e.target.value)}
@@ -209,13 +268,13 @@ const CreateJobPage: React.FC = () => {
                   }
                 }}
                 type="text"
-                className="flex-1 px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                className="flex-1 px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
                 placeholder="Type a skill and press Enter"
               />
               <button
                 type="button"
                 onClick={addSkill}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium inline-flex items-center gap-2 transition-colors shadow-sm shadow-indigo-200"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-lg font-medium inline-flex items-center justify-center gap-2 transition-colors shadow-sm shadow-indigo-200"
               >
                 <Plus size={18} />
                 Add
@@ -256,11 +315,11 @@ const CreateJobPage: React.FC = () => {
             {errors.requirements ? <p className="text-sm text-red-600">{errors.requirements}</p> : null}
           </div>
 
-          <div className="pt-2 flex items-center justify-end gap-3">
+          <div className="pt-2 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
             <button
               type="button"
               onClick={() => router.push('/jobs')}
-              className="px-6 py-2 rounded-lg font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+              className="px-6 py-3 rounded-lg font-medium text-slate-600 hover:bg-slate-50 transition-colors w-full sm:w-auto"
               disabled={submitting}
             >
               Cancel
@@ -268,7 +327,7 @@ const CreateJobPage: React.FC = () => {
             <button
               type="submit"
               disabled={submitting}
-              className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:hover:bg-indigo-600 text-white px-6 py-2 rounded-lg font-medium inline-flex items-center gap-2 transition-colors shadow-sm shadow-indigo-200"
+              className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:hover:bg-indigo-600 text-white px-6 py-3 rounded-lg font-medium inline-flex items-center justify-center gap-2 transition-colors shadow-sm shadow-indigo-200 w-full sm:w-auto"
             >
               {submitting ? (
                 <>

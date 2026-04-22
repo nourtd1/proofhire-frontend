@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useDispatch, useSelector } from 'react-redux';
-import { Plus, Briefcase } from 'lucide-react';
+import { ArrowRight, Briefcase, Plus, Sparkles, Zap } from 'lucide-react';
 import api, { getApiErrorMessage } from '@/lib/api';
 import JobCard from '@/components/jobs/JobCard';
 import type { RootState, AppDispatch } from '@/store';
@@ -83,21 +83,77 @@ const JobsPage: React.FC = () => {
   }, [dispatch]);
 
   const showEmpty = useMemo(() => !loading && !error && jobs.length === 0, [loading, error, jobs.length]);
+  const activeJobs = useMemo(() => jobs.filter((job) => job.status !== 'Closed').length, [jobs]);
+  const recentJobs = useMemo(() => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+    return jobs.filter((job) => new Date(job.createdAt).getTime() >= cutoff.getTime()).length;
+  }, [jobs]);
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Jobs</h1>
-          <p className="text-slate-500 mt-1">Manage your open positions</p>
+      <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-6">
+        <div className="rounded-3xl bg-slate-900 px-6 py-7 text-white sm:px-8">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
+            Hiring Pipeline
+          </div>
+          <h1 className="mt-4 text-3xl font-bold sm:text-4xl">Build a clean shortlist from every role you open.</h1>
+          <p className="mt-3 max-w-2xl text-sm text-slate-300 sm:text-base">
+            Create a role once, collect structured applications, and move directly into AI screening and skill verification.
+          </p>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <Link
+              href="/jobs/new"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 font-semibold text-slate-900 transition-colors hover:bg-slate-100"
+            >
+              <Plus size={18} />
+              Create Job
+            </Link>
+            <Link
+              href="/applicants"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-3 font-semibold text-white transition-colors hover:bg-white/10"
+            >
+              Open Applications
+              <ArrowRight size={18} />
+            </Link>
+          </div>
         </div>
-        <Link
-          href="/jobs/new"
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm shadow-indigo-200"
-        >
-          <Plus size={20} />
-          Create Job
-        </Link>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-1 gap-4">
+          <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+                <Briefcase size={20} />
+              </div>
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total jobs</div>
+                <div className="mt-1 text-2xl font-bold text-slate-900">{jobs.length}</div>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
+                <Sparkles size={20} />
+              </div>
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Active roles</div>
+                <div className="mt-1 text-2xl font-bold text-slate-900">{activeJobs}</div>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
+                <Zap size={20} />
+              </div>
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Created recently</div>
+                <div className="mt-1 text-2xl font-bold text-slate-900">{recentJobs}</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {error ? (
@@ -111,14 +167,14 @@ const JobsPage: React.FC = () => {
           {Array.from({ length: 3 }).map((_, idx) => (
             <div
               key={idx}
-              className="h-44 bg-slate-100 rounded-2xl animate-pulse"
+              className="h-64 bg-slate-100 rounded-3xl animate-pulse"
             />
           ))}
         </div>
       ) : null}
 
       {showEmpty ? (
-        <div className="py-20 flex flex-col items-center justify-center text-center bg-white rounded-2xl border-2 border-dashed border-slate-200">
+        <div className="py-20 flex flex-col items-center justify-center text-center bg-white rounded-3xl border-2 border-dashed border-slate-200">
           <div className="bg-slate-50 p-6 rounded-full mb-4">
             <Briefcase size={48} className="text-slate-300" />
           </div>
@@ -137,7 +193,7 @@ const JobsPage: React.FC = () => {
       ) : null}
 
       {!loading && !showEmpty ? (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           {jobs.map((job) => (
             <JobCard key={job.id} job={job} />
           ))}

@@ -3,20 +3,14 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Briefcase, Users, Zap } from 'lucide-react';
+import { Zap } from 'lucide-react';
+import { navigationItems } from './navigation';
 
 const Sidebar = () => {
   const pathname = usePathname();
 
-  const navLinks = [
-    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/jobs', label: 'Jobs', icon: Briefcase },
-    { href: '/applicants', label: 'Applications', icon: Users },
-    { href: '/screening', label: 'Screening', icon: Zap },
-  ];
-
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-[#0f172a] text-white flex flex-col z-50">
+    <aside className="fixed left-0 top-0 z-50 hidden h-screen w-64 flex-col bg-[#0f172a] text-white lg:flex">
       <div className="p-6">
         <div className="mb-8">
           <div className="flex items-center gap-2">
@@ -35,13 +29,14 @@ const Sidebar = () => {
           Recruiter Workspace
         </div>
 
-        <nav className="space-y-1">
-          {navLinks.map((item) => {
+        <nav className="space-y-1" aria-label="Primary">
+          {navigationItems.map((item) => {
             const isActive = pathname.startsWith(item.href);
             return (
               <Link
                 key={item.href}
                 href={item.href}
+                aria-current={isActive ? 'page' : undefined}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                   isActive
                     ? 'bg-indigo-600 text-white'

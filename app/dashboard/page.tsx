@@ -4,8 +4,9 @@ import React, { useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
-import { Briefcase, CheckCircle, List, TrendingUp, Zap } from 'lucide-react';
+import { ArrowRight, Briefcase, CheckCircle, List, TrendingUp, Users, Zap } from 'lucide-react';
 import api, { getApiErrorMessage } from '@/lib/api';
+import { writeOnboardingProgress } from '@/lib/onboarding';
 import type { RootState, AppDispatch } from '@/store';
 import { setJobs, setLoading, setError } from '@/store/slices/jobsSlice';
 import EmptyState from '@/components/ui/EmptyState';
@@ -63,6 +64,11 @@ export default function DashboardPage(): React.JSX.Element {
   const dispatch = useDispatch<AppDispatch>();
   const { jobs, loading, error } = useSelector((s: RootState) => s.jobs);
 
+  const openCreateJob = (): void => {
+    writeOnboardingProgress({ startedJobCreation: true });
+    router.push('/jobs/new');
+  };
+
   const cutoff30Days = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() - 30);
@@ -101,13 +107,56 @@ export default function DashboardPage(): React.JSX.Element {
   }, [jobs, cutoff30Days]);
 
   const recent = useMemo(() => sortedJobs.slice(0, 3) as JobWithExtras[], [sortedJobs]);
+  const screeningReady = jobs.filter((job) => Array.isArray((job as JobWithExtras).skills) && ((job as JobWithExtras).skills?.length ?? 0) > 0).length;
 
   return (
     <div className="space-y-8">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-500 mt-1">Welcome to ProofHire — AI-powered talent screening</p>
+      <div className="grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-6">
+        <div className="rounded-3xl bg-slate-900 px-6 py-7 text-white sm:px-8">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
+            Recruiter Overview
+          </div>
+          <h1 className="mt-4 text-3xl font-bold sm:text-4xl">Hire faster with a cleaner screening workflow.</h1>
+          <p className="mt-3 max-w-2xl text-sm text-slate-300 sm:text-base">
+            Create roles, collect applications, run AI ranking, and verify candidate skills from one simple workspace.
+          </p>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={openCreateJob}
+              data-onboarding="dashboard-create-job"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 font-semibold text-slate-900 transition-colors hover:bg-slate-100"
+            >
+              Create New Job
+              <ArrowRight size={18} />
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push('/applicants')}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-3 font-semibold text-white transition-colors hover:bg-white/10"
+            >
+              Open Applications
+              <Users size={18} />
+            </button>
+          </div>
+        </div>
+
+        <div data-onboarding="dashboard-next-steps" className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-bold text-slate-900">What to do next</h2>
+          <div className="mt-5 space-y-4">
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <div className="text-sm font-semibold text-slate-900">1. Create a role</div>
+              <div className="mt-1 text-sm text-slate-500">Add title, level, description, and required skills.</div>
+            </div>
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <div className="text-sm font-semibold text-slate-900">2. Add candidates</div>
+              <div className="mt-1 text-sm text-slate-500">Use structured JSON or bulk CSV import.</div>
+            </div>
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <div className="text-sm font-semibold text-slate-900">3. Run screening</div>
+              <div className="mt-1 text-sm text-slate-500">Get ranking, reasoning, and verified skill signals.</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -145,7 +194,7 @@ export default function DashboardPage(): React.JSX.Element {
         <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-3xl font-bold text-gray-800">{jobs.length}</div>
+              <div className="text-3xl font-bold text-gray-800">{screeningReady}</div>
               <div className="text-sm text-gray-500 mt-1">Ready to Screen</div>
             </div>
             <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
@@ -184,13 +233,13 @@ export default function DashboardPage(): React.JSX.Element {
                 icon={Briefcase}
                 title="No jobs yet"
                 subtitle="Create your first job to get started"
-                action={{ label: 'Create New Job', onClick: () => router.push('/jobs/new') }}
+                action={{ label: 'Create New Job', onClick: openCreateJob }}
               />
             </div>
           ) : (
             <div className="divide-y divide-gray-100">
               {recent.map((j) => (
-                <div key={j.id} className="px-6 py-4 flex items-center justify-between gap-4">
+                <div key={j.id} className="px-4 py-4 sm:px-6 sm:py-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
                     <div className="flex items-center gap-3">
                       <div className="font-semibold text-gray-800 truncate">{j.title}</div>
@@ -202,18 +251,18 @@ export default function DashboardPage(): React.JSX.Element {
                     </div>
                     <div className="text-sm text-gray-500 mt-1">{formatDate(j.createdAt)}</div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex flex-col gap-2 shrink-0 sm:flex-row">
                     <button
                       type="button"
                       onClick={() => router.push(`/applicants/${j.id}`)}
-                      className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm"
+                      className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm w-full sm:w-auto"
                     >
                       Applicants
                     </button>
                     <button
                       type="button"
                       onClick={() => router.push(`/screening/${j.id}`)}
-                      className="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium shadow-sm shadow-indigo-200"
+                      className="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium shadow-sm shadow-indigo-200 w-full sm:w-auto"
                     >
                       Screen
                     </button>
@@ -229,7 +278,7 @@ export default function DashboardPage(): React.JSX.Element {
           <div className="grid grid-cols-1 gap-4">
             <button
               type="button"
-              onClick={() => router.push('/jobs/new')}
+              onClick={openCreateJob}
               className="text-left bg-white rounded-xl p-6 border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
             >
               <div className="flex items-center gap-3">

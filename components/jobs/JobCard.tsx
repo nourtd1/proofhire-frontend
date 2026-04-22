@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Trash2 } from 'lucide-react';
+import { ArrowRight, Trash2, Users, Zap } from 'lucide-react';
 import { Job } from '@/types';
 
 interface JobCardProps {
@@ -29,9 +29,10 @@ const JobCard: React.FC<JobCardProps> = ({ job, onDelete }) => {
   const experienceLevel = typeof extras.experienceLevel === 'string' ? extras.experienceLevel : '';
   const shownSkills = skills.slice(0, 4);
   const remaining = Math.max(0, skills.length - shownSkills.length);
+  const requirementCount = useMemo(() => job.requirements.length, [job.requirements.length]);
 
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+    <div className="bg-white p-5 sm:p-6 rounded-3xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-start gap-3">
@@ -57,6 +58,12 @@ const JobCard: React.FC<JobCardProps> = ({ job, onDelete }) => {
         ) : null}
       </div>
 
+      <p className="mt-4 text-sm leading-6 text-slate-500">
+        {job.description
+          ? `${job.description.slice(0, 135)}${job.description.length > 135 ? '…' : ''}`
+          : 'No description provided yet.'}
+      </p>
+
       <div className="mt-4 flex flex-wrap gap-2">
         {shownSkills.map((s) => (
           <span
@@ -73,22 +80,43 @@ const JobCard: React.FC<JobCardProps> = ({ job, onDelete }) => {
         ) : null}
       </div>
 
-      <div className="mt-6 flex items-center justify-between text-sm text-slate-500">
-        <span>{formatDate(job.createdAt)}</span>
-        <div className="flex items-center gap-2">
+      <div className="mt-5 grid grid-cols-2 gap-3">
+        <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Skills</div>
+          <div className="mt-1 text-xl font-bold text-slate-900">{skills.length}</div>
+        </div>
+        <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Requirements</div>
+          <div className="mt-1 text-xl font-bold text-slate-900">{requirementCount}</div>
+        </div>
+      </div>
+
+      <div className="mt-6 flex flex-col gap-4 text-sm text-slate-500">
+        <span>Created {formatDate(job.createdAt)}</span>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <button
             type="button"
             onClick={() => router.push(`/applicants/${job.id}`)}
-            className="px-3 py-2 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors"
+            className="px-4 py-3 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors inline-flex items-center justify-center gap-2"
           >
-            View Applicants
+            <Users size={16} />
+            Applications
           </button>
           <button
             type="button"
             onClick={() => router.push(`/screening/${job.id}`)}
-            className="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition-colors shadow-sm shadow-indigo-200"
+            className="px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition-colors shadow-sm shadow-indigo-200 inline-flex items-center justify-center gap-2"
           >
-            Screen Now
+            <Zap size={16} />
+            Run Screening
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push(`/applicants/${job.id}`)}
+            className="px-4 py-3 rounded-xl border border-transparent text-indigo-700 font-medium hover:bg-indigo-50 transition-colors inline-flex items-center justify-center gap-2 sm:ml-auto"
+          >
+            Open Workspace
+            <ArrowRight size={16} />
           </button>
         </div>
       </div>

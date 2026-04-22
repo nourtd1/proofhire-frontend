@@ -12,7 +12,10 @@ const ScreeningIndexPage = () => {
         </div>
       </div>
 
-      <div className="py-20 flex flex-col items-center justify-center text-center bg-white rounded-2xl border-2 border-dashed border-slate-200">
+      <div
+        data-onboarding="screening-workspace"
+        className="py-20 flex flex-col items-center justify-center text-center bg-white rounded-2xl border-2 border-dashed border-slate-200"
+      >
         <div className="bg-indigo-50 p-6 rounded-full mb-4">
           <Zap size={48} className="text-indigo-300" />
         </div>
